@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -167,7 +167,7 @@ namespace ErAudioTool.UI
             };
             var iconText = new TextBlock
             {
-                Text = "â—",
+                Text = "●",
                 FontSize = 22,
                 Foreground = Brushes.White,
                 HorizontalAlignment = HorizontalAlignment.Center,
@@ -186,7 +186,7 @@ namespace ErAudioTool.UI
             };
             var subText = new TextBlock
             {
-                Text = "System-Audio direkt aufnehmen ohne QualitÃ¤tsverlust (WASAPI)",
+                Text = "System-Audio direkt aufnehmen ohne Qualitätsverlust (WASAPI)",
                 FontSize = 11,
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
                 Margin = new Thickness(0, 2, 0, 0)
@@ -208,7 +208,7 @@ namespace ErAudioTool.UI
             };
             _statusPillText = new TextBlock
             {
-                Text = "â— BEREIT",
+                Text = "● BEREIT",
                 FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129))
@@ -218,11 +218,11 @@ namespace ErAudioTool.UI
             // Tab Switcher Buttons in Header
             var tabsStack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0) };
 
-            _btnTabRecord = CreateStyledButton("ðŸŽ™ Aufnahme", Color.FromRgb(37, 99, 235), Color.FromRgb(29, 78, 216), 34);
+            _btnTabRecord = CreateStyledButton("🎙 Aufnahme", Color.FromRgb(37, 99, 235), Color.FromRgb(29, 78, 216), 34);
             _btnTabRecord.Click += (s, e) => SwitchToRecordTab();
             tabsStack.Children.Add(_btnTabRecord);
 
-            _btnTabMidi = CreateStyledButton("ðŸŽ¹ Audio zu MIDI", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 34);
+            _btnTabMidi = CreateStyledButton("🎹 Audio zu MIDI", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 34);
             _btnTabMidi.Margin = new Thickness(8, 0, 0, 0);
             _btnTabMidi.Opacity = 0.6;
             _btnTabMidi.Click += (s, e) => SwitchToMidiTab();
@@ -272,7 +272,7 @@ namespace ErAudioTool.UI
             _deviceComboBox.SelectionChanged += DeviceComboBox_SelectionChanged;
             devGrid.Children.Add(_deviceComboBox);
 
-            _refreshDevicesButton = CreateStyledButton("ðŸ”„ Aktualisieren", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 36);
+            _refreshDevicesButton = CreateStyledButton("🔄 Aktualisieren", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 36);
             _refreshDevicesButton.Click += (s, e) => LoadAudioDevices();
             Grid.SetColumn(_refreshDevicesButton, 1);
             devGrid.Children.Add(_refreshDevicesButton);
@@ -282,13 +282,13 @@ namespace ErAudioTool.UI
 
             _deviceFormatText = new TextBlock
             {
-                Text = "Format: Ermittle GerÃ¤tedaten...",
+                Text = "Format: Ermittle Gerätedaten...",
                 FontSize = 11,
                 Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
                 Margin = new Thickness(0, 8, 0, 0)
             };
             devStack.Children.Add(_deviceFormatText);
-            contentStack.Children.Add(CreateCard("WIEDERGABEGERÃ„T (LOOPBACK-QUELLE)", devStack));
+            contentStack.Children.Add(CreateCard("WIEDERGABEGERÄT (LOOPBACK-QUELLE)", devStack));
 
             // 2. VU-Meter Card
             var meterStack = new StackPanel();
@@ -301,7 +301,7 @@ namespace ErAudioTool.UI
 
             var meterDesc = new TextBlock
             {
-                Text = "Pegelanzeige des gewÃ¤hlten Ausgangs (Echtzeit)",
+                Text = "Pegelanzeige des gewählten Ausgangs (Echtzeit)",
                 FontSize = 11,
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184))
             };
@@ -309,7 +309,7 @@ namespace ErAudioTool.UI
 
             _audioActivityBadge = new TextBlock
             {
-                Text = "â— Audio aktiv",
+                Text = "● Audio aktiv",
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129))
@@ -346,7 +346,7 @@ namespace ErAudioTool.UI
 
             _fileSizeText = new TextBlock
             {
-                Text = "GrÃ¶ÃŸe: 0.0 MB",
+                Text = "Größe: 0.0 MB",
                 FontSize = 12,
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
                 Margin = new Thickness(0, 0, 20, 0)
@@ -366,13 +366,13 @@ namespace ErAudioTool.UI
             btnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             btnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            _btnRecord = CreateStyledButton("â—  Aufnahme starten", Color.FromRgb(239, 68, 68), Color.FromRgb(220, 38, 38), 44, 210);
+            _btnRecord = CreateStyledButton("●  Aufnahme starten", Color.FromRgb(239, 68, 68), Color.FromRgb(220, 38, 38), 44, 210);
             _btnRecord.FontWeight = FontWeights.Bold;
             _btnRecord.FontSize = 14;
             _btnRecord.Click += BtnRecord_Click;
             btnGrid.Children.Add(_btnRecord);
 
-            _btnPause = CreateStyledButton("â¸  Pause", Color.FromRgb(245, 158, 11), Color.FromRgb(217, 119, 6), 44, 120);
+            _btnPause = CreateStyledButton("⏸  Pause", Color.FromRgb(245, 158, 11), Color.FromRgb(217, 119, 6), 44, 120);
             _btnPause.Margin = new Thickness(14, 0, 0, 0);
             _btnPause.IsEnabled = false;
             _btnPause.Click += BtnPause_Click;
@@ -392,7 +392,7 @@ namespace ErAudioTool.UI
             // Folder row
             var folderLabel = new TextBlock
             {
-                Text = "Zielverzeichnis fÃ¼r Aufnahmen:",
+                Text = "Zielverzeichnis für Aufnahmen:",
                 FontSize = 12,
                 Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
                 Margin = new Thickness(0, 0, 0, 6)
@@ -419,13 +419,13 @@ namespace ErAudioTool.UI
             _outputDirTextBox.TextChanged += (s, e) => _outputDirectory = _outputDirTextBox.Text;
             folderGrid.Children.Add(_outputDirTextBox);
 
-            _browseDirButton = CreateStyledButton("ðŸ“ Durchsuchen...", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
+            _browseDirButton = CreateStyledButton("📁 Durchsuchen...", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
             _browseDirButton.Margin = new Thickness(0, 0, 8, 0);
             _browseDirButton.Click += BrowseDirButton_Click;
             Grid.SetColumn(_browseDirButton, 1);
             folderGrid.Children.Add(_browseDirButton);
 
-            _btnOpenFolder = CreateStyledButton("ðŸ“‚ Ordner Ã¶ffnen", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
+            _btnOpenFolder = CreateStyledButton("📂 Ordner öffnen", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
             _btnOpenFolder.Click += (s, e) =>
             {
                 if (Directory.Exists(_outputDirectory))
@@ -478,7 +478,7 @@ namespace ErAudioTool.UI
             var prefixStack = new StackPanel { Margin = new Thickness(10, 0, 0, 0) };
             var prefixLabel = new TextBlock
             {
-                Text = "Dateinamen-PrÃ¤fix:",
+                Text = "Dateinamen-Präfix:",
                 FontSize = 12,
                 Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
                 Margin = new Thickness(0, 0, 0, 6)
@@ -559,7 +559,7 @@ namespace ErAudioTool.UI
             };
             inGrid.Children.Add(_midiInputTextBox);
 
-            var btnBrowseIn = CreateStyledButton("ðŸ“ Durchsuchen...", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
+            var btnBrowseIn = CreateStyledButton("📁 Durchsuchen...", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
             btnBrowseIn.Click += (s, e) => SelectMidiInputFile();
             Grid.SetColumn(btnBrowseIn, 1);
             inGrid.Children.Add(btnBrowseIn);
@@ -591,7 +591,7 @@ namespace ErAudioTool.UI
             };
             outGrid.Children.Add(_midiOutputTextBox);
 
-            var btnBrowseOut = CreateStyledButton("ðŸ’¾ Speicherort...", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
+            var btnBrowseOut = CreateStyledButton("💾 Speicherort...", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
             btnBrowseOut.Click += (s, e) => SelectMidiOutputFile();
             Grid.SetColumn(btnBrowseOut, 1);
             outGrid.Children.Add(btnBrowseOut);
@@ -609,7 +609,7 @@ namespace ErAudioTool.UI
 
             var threshLabel = new TextBlock
             {
-                Text = "LautstÃ¤rke-Schwellenwert (Rauschfilter):",
+                Text = "Lautstärke-Schwellenwert (Rauschfilter):",
                 FontSize = 12,
                 Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225))
             };
@@ -648,7 +648,7 @@ namespace ErAudioTool.UI
 
             var durLabel = new TextBlock
             {
-                Text = "Minimale NotenlÃ¤nge:",
+                Text = "Minimale Notenlänge:",
                 FontSize = 12,
                 Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225))
             };
@@ -722,7 +722,7 @@ namespace ErAudioTool.UI
             // Multi-Instrument Arrangement Section
             var arrLabel = new TextBlock
             {
-                Text = "INSTRUMENTAL-ARRANGEMENT FÃœR SUNO / DAWS:",
+                Text = "INSTRUMENTAL-ARRANGEMENT FÜR SUNO / DAWS:",
                 FontSize = 11,
                 FontWeight = FontWeights.Bold,
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
@@ -732,7 +732,7 @@ namespace ErAudioTool.UI
 
             _midiAddDrumsCheckBox = new CheckBox
             {
-                Content = "ðŸ¥ Takt & Beat hinzufÃ¼gen (Kanal 10: Kick, Snare & Hi-Hat)",
+                Content = "🥁 Takt & Beat hinzufügen (Kanal 10: Kick, Snare & Hi-Hat)",
                 IsChecked = true,
                 Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
                 Margin = new Thickness(0, 0, 0, 6)
@@ -741,7 +741,7 @@ namespace ErAudioTool.UI
 
             _midiAddBassCheckBox = new CheckBox
             {
-                Content = "ðŸŽ¸ Bassline / Fundament erzeugen (Kanal 2: Electric Bass)",
+                Content = "🎸 Bassline / Fundament erzeugen (Kanal 2: Electric Bass)",
                 IsChecked = true,
                 Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
                 Margin = new Thickness(0, 0, 0, 6)
@@ -750,7 +750,7 @@ namespace ErAudioTool.UI
 
             _midiAddChordsCheckBox = new CheckBox
             {
-                Content = "âœ¨ Harmonie-Akkorde / Rhythmusgitarre (Kanal 3: Acoustic Guitar)",
+                Content = "✨ Harmonie-Akkorde / Rhythmusgitarre (Kanal 3: Acoustic Guitar)",
                 IsChecked = true,
                 Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
                 Margin = new Thickness(0, 0, 0, 12)
@@ -768,7 +768,7 @@ namespace ErAudioTool.UI
             paramStack.Children.Add(_midiUseCliCheckBox);
 
             // Convert Button
-            _btnConvertMidi = CreateStyledButton("ðŸŽ¹  Multi-Instrument MIDI erstellen", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 42, 290);
+            _btnConvertMidi = CreateStyledButton("🎹  Multi-Instrument MIDI erstellen", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 42, 290);
             _btnConvertMidi.FontWeight = FontWeights.Bold;
             _btnConvertMidi.FontSize = 13;
             _btnConvertMidi.HorizontalAlignment = HorizontalAlignment.Center;
@@ -789,7 +789,7 @@ namespace ErAudioTool.UI
                 BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
                 FontFamily = new FontFamily("Consolas, Courier New"),
                 FontSize = 11,
-                Text = "Bereit fÃ¼r Konvertierung. WÃ¤hlen Sie oben eine Audiodatei oder klicken Sie in den Aufnahmen auf 'ðŸŽ¹ MIDI'."
+                Text = "Bereit für Konvertierung. Wählen Sie oben eine Audiodatei oder klicken Sie in den Aufnahmen auf '🎹 MIDI'."
             };
             logStack.Children.Add(_midiLogTextBox);
             midiStack.Children.Add(CreateCard("KONVERTIERUNGS-PROTOKOLL & NOTEN-INSPEKTION", logStack));
@@ -810,7 +810,7 @@ namespace ErAudioTool.UI
 
             var footerText = new TextBlock
             {
-                Text = "ER Audio Tool v1.0 â€¢ Native WASAPI Loopback â€¢ Bereit",
+                Text = "ER Audio Tool v1.0 • Native WASAPI Loopback • Bereit",
                 FontSize = 11,
                 Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139))
             };
@@ -921,12 +921,12 @@ namespace ErAudioTool.UI
                     _vuMeter.SetLevels(e.Left, e.Right);
                     if (e.Master > 0.005f)
                     {
-                        _audioActivityBadge.Text = "â— Audio aktiv";
+                        _audioActivityBadge.Text = "● Audio aktiv";
                         _audioActivityBadge.Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129));
                     }
                     else
                     {
-                        _audioActivityBadge.Text = "â—‹ Stille";
+                        _audioActivityBadge.Text = "○ Stille";
                         _audioActivityBadge.Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139));
                     }
                 });
@@ -979,7 +979,7 @@ namespace ErAudioTool.UI
             }
             else
             {
-                _deviceFormatText.Text = "Kein AudiogerÃ¤t gefunden!";
+                _deviceFormatText.Text = "Kein Audiogerät gefunden!";
             }
         }
 
@@ -989,7 +989,7 @@ namespace ErAudioTool.UI
             if (dev != null)
             {
                 _engine.SetDevice(dev);
-                _deviceFormatText.Text = string.Format("Format: {0} ({1})", dev.FormatDescription, dev.IsDefault ? "StandardgerÃ¤t" : "Alternativ");
+                _deviceFormatText.Text = string.Format("Format: {0} ({1})", dev.FormatDescription, dev.IsDefault ? "Standardgerät" : "Alternativ");
                 UpdateFormatBadge();
             }
         }
@@ -1013,7 +1013,7 @@ namespace ErAudioTool.UI
                     _currentDuration.Milliseconds / 100);
 
                 double mb = (double)_currentBytes / (1024 * 1024);
-                _fileSizeText.Text = string.Format("GrÃ¶ÃŸe: {0:0.0} MB", mb);
+                _fileSizeText.Text = string.Format("Größe: {0:0.0} MB", mb);
             }
         }
 
@@ -1025,7 +1025,7 @@ namespace ErAudioTool.UI
                 var dev = _deviceComboBox.SelectedItem as AudioDeviceInfo ?? AudioDeviceEnumerator.GetDefaultRenderDevice();
                 if (dev == null)
                 {
-                    MessageBox.Show(this, "Bitte wÃ¤hlen Sie ein AudiogerÃ¤t aus.", "Kein GerÃ¤t", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(this, "Bitte wählen Sie ein Audiogerät aus.", "Kein Gerät", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -1069,15 +1069,15 @@ namespace ErAudioTool.UI
             switch (state)
             {
                 case RecordingState.Idle:
-                    _statusPillText.Text = "â— BEREIT";
+                    _statusPillText.Text = "● BEREIT";
                     _statusPillText.Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129));
                     _statusPillBorder.Background = new SolidColorBrush(Color.FromArgb(50, 16, 185, 129));
                     _statusPillBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(16, 185, 129));
 
-                    _btnRecord.Content = "â—  Aufnahme starten";
+                    _btnRecord.Content = "●  Aufnahme starten";
                     ApplyButtonColor(_btnRecord, Color.FromRgb(239, 68, 68), Color.FromRgb(220, 38, 38));
                     _btnPause.IsEnabled = false;
-                    _btnPause.Content = "â¸  Pause";
+                    _btnPause.Content = "⏸  Pause";
 
                     _deviceComboBox.IsEnabled = true;
                     _refreshDevicesButton.IsEnabled = true;
@@ -1085,15 +1085,15 @@ namespace ErAudioTool.UI
                     break;
 
                 case RecordingState.Recording:
-                    _statusPillText.Text = "â— AUFNAHME LÃ„UFT";
+                    _statusPillText.Text = "● AUFNAHME LÄUFT";
                     _statusPillText.Foreground = new SolidColorBrush(Color.FromRgb(239, 68, 68));
                     _statusPillBorder.Background = new SolidColorBrush(Color.FromArgb(60, 239, 68, 68));
                     _statusPillBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(239, 68, 68));
 
-                    _btnRecord.Content = "â–   Aufnahme beenden";
+                    _btnRecord.Content = "■  Aufnahme beenden";
                     ApplyButtonColor(_btnRecord, Color.FromRgb(71, 85, 105), Color.FromRgb(100, 116, 139));
                     _btnPause.IsEnabled = true;
-                    _btnPause.Content = "â¸  Pause";
+                    _btnPause.Content = "⏸  Pause";
                     ApplyButtonColor(_btnPause, Color.FromRgb(245, 158, 11), Color.FromRgb(217, 119, 6));
 
                     _deviceComboBox.IsEnabled = false;
@@ -1102,17 +1102,17 @@ namespace ErAudioTool.UI
                     break;
 
                 case RecordingState.Paused:
-                    _statusPillText.Text = "â¸ PAUSIERT";
+                    _statusPillText.Text = "⏸ PAUSIERT";
                     _statusPillText.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
                     _statusPillBorder.Background = new SolidColorBrush(Color.FromArgb(50, 245, 158, 11));
                     _statusPillBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(245, 158, 11));
 
-                    _btnPause.Content = "â–¶  Fortsetzen";
+                    _btnPause.Content = "▶  Fortsetzen";
                     ApplyButtonColor(_btnPause, Color.FromRgb(16, 185, 129), Color.FromRgb(5, 150, 105));
                     break;
 
                 case RecordingState.Stopping:
-                    _statusPillText.Text = "â³ WIRD GESPEICHERT...";
+                    _statusPillText.Text = "⏳ WIRD GESPEICHERT...";
                     _btnRecord.IsEnabled = false;
                     _btnPause.IsEnabled = false;
                     break;
@@ -1133,7 +1133,7 @@ namespace ErAudioTool.UI
         {
             using (var dlg = new System.Windows.Forms.FolderBrowserDialog())
             {
-                dlg.Description = "WÃ¤hlen Sie das Zielverzeichnis fÃ¼r Loopback-Aufnahmen:";
+                dlg.Description = "Wählen Sie das Zielverzeichnis für Loopback-Aufnahmen:";
                 dlg.SelectedPath = _outputDirectory;
                 if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
@@ -1176,7 +1176,7 @@ namespace ErAudioTool.UI
             };
             var metaBlock = new TextBlock
             {
-                Text = string.Format("Dauer: {0} â€¢ GrÃ¶ÃŸe: {1} â€¢ {2}", durStr, sizeStr, timeStr),
+                Text = string.Format("Dauer: {0} • Größe: {1} • {2}", durStr, sizeStr, timeStr),
                 FontSize = 11,
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
                 Margin = new Thickness(0, 2, 0, 0)
@@ -1187,28 +1187,28 @@ namespace ErAudioTool.UI
 
             var actionsStack = new StackPanel { Orientation = Orientation.Horizontal };
 
-            var btnPlay = CreateStyledButton("â–¶ Abspielen", Color.FromRgb(16, 185, 129), Color.FromRgb(5, 150, 105), 28);
+            var btnPlay = CreateStyledButton("▶ Abspielen", Color.FromRgb(16, 185, 129), Color.FromRgb(5, 150, 105), 28);
             btnPlay.Margin = new Thickness(0, 0, 6, 0);
             btnPlay.Click += (s, ev) =>
             {
                 if (_player.IsPlaying && _player.CurrentFile == filePath)
                 {
                     _player.Stop();
-                    btnPlay.Content = "â–¶ Abspielen";
+                    btnPlay.Content = "▶ Abspielen";
                 }
                 else
                 {
                     _player.Play(filePath);
-                    btnPlay.Content = "â¹ Stopp";
+                    btnPlay.Content = "⏹ Stopp";
                 }
             };
             _player.PlaybackStopped += (s, ev) =>
             {
-                Dispatcher.InvokeAsync(() => btnPlay.Content = "â–¶ Abspielen");
+                Dispatcher.InvokeAsync(() => btnPlay.Content = "▶ Abspielen");
             };
             actionsStack.Children.Add(btnPlay);
 
-            var btnMidi = CreateStyledButton("ðŸŽ¹ MIDI", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 28);
+            var btnMidi = CreateStyledButton("🎹 MIDI", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 28);
             btnMidi.Margin = new Thickness(6, 0, 0, 0);
             btnMidi.Click += (s, ev) =>
             {
@@ -1258,7 +1258,7 @@ namespace ErAudioTool.UI
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
                 Filter = "Audiodateien (*.wav;*.mp3;*.ogg;*.flac;*.aac)|*.wav;*.mp3;*.ogg;*.flac;*.aac|WAV Dateien (*.wav)|*.wav|Alle Dateien (*.*)|*.*",
-                Title = "Audiodatei auswaehlen"
+                Title = "Audiodatei für MIDI-Konvertierung auswählen"
             };
             if (dlg.ShowDialog() == true)
             {
@@ -1275,7 +1275,7 @@ namespace ErAudioTool.UI
             var dlg = new Microsoft.Win32.SaveFileDialog
             {
                 Filter = "Standard MIDI Dateien (*.mid)|*.mid|Alle Dateien (*.*)|*.*",
-                Title = "Speicherort fÃ¼r MIDI-Datei wÃ¤hlen"
+                Title = "Speicherort für MIDI-Datei wählen"
             };
             if (!string.IsNullOrEmpty(_midiOutputTextBox.Text))
             {
@@ -1299,7 +1299,7 @@ namespace ErAudioTool.UI
 
             if (string.IsNullOrEmpty(inFile) || !File.Exists(inFile))
             {
-                MessageBox.Show(this, "Bitte wÃ¤hlen Sie eine gÃ¼ltige Eingangs-Audiodatei aus.", "Datei fehlt", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(this, "Bitte wählen Sie eine gültige Eingangs-Audiodatei aus.", "Datei fehlt", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1375,6 +1375,7 @@ namespace ErAudioTool.UI
             });
         }
 
+
         private void RunPreAnalysis(string filePath)
         {
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return;
@@ -1415,7 +1416,7 @@ namespace ErAudioTool.UI
 
                         _midiLogTextBox.AppendText("\n=== Parameter automatisch optimiert ===\n");
                         _midiLogTextBox.AppendText("Die Slider wurden auf die empfohlenen Werte gesetzt.\n");
-                        _midiLogTextBox.AppendText("Sie koennen die Werte manuell anpassen und dann konvertieren.\n");
+                        _midiLogTextBox.AppendText("Sie können die Werte manuell anpassen und dann konvertieren.\n");
                     }
                     else
                     {
