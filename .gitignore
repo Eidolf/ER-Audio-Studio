@@ -1,0 +1,9 @@
+﻿# Git ignore for ER-Audio-Studio
+bin/
+obj/
+recordings/
+*.user
+*.suo
+*.pdb
+startup_error.log
+test_run.ps1

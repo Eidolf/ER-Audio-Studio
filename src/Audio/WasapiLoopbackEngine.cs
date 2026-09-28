@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -115,7 +115,7 @@ namespace ErAudioTool.Audio
                 _selectedDevice = device ?? AudioDeviceEnumerator.GetDefaultRenderDevice();
                 if (_selectedDevice == null)
                 {
-                    throw new InvalidOperationException("Kein aktives Audiogerät gefunden.");
+                    throw new InvalidOperationException("Kein aktives Wiedergabegerät gefunden.");
                 }
 
                 _outputPath = outputPath;
@@ -221,16 +221,13 @@ namespace ErAudioTool.Audio
 
             try
             {
-                bool isMic = _selectedDevice != null && _selectedDevice.Type == DeviceType.CaptureMicrophone;
-                EDataFlow flow = isMic ? EDataFlow.eCapture : EDataFlow.eRender;
-
-                device = AudioDeviceEnumerator.ActivateDevice(_selectedDevice != null ? _selectedDevice.Id : null, flow);
+                device = AudioDeviceEnumerator.ActivateDevice(_selectedDevice != null ? _selectedDevice.Id : null);
                 if (device == null)
                 {
                     throw new Exception("Konnte das ausgewählte Audiogerät nicht aktivieren.");
                 }
 
-                // 1. Initialize Audio Client
+                // 1. Initialize Loopback Audio Client
                 object objClient;
                 Guid iidClient = WasapiGuids.IID_IAudioClient;
                 int hr = device.Activate(ref iidClient, 1, IntPtr.Zero, out objClient);
@@ -247,47 +244,43 @@ namespace ErAudioTool.Audio
                 }
                 var fmt = (WAVEFORMATEX)Marshal.PtrToStructure(pFormat, typeof(WAVEFORMATEX));
 
-                // 2. If Loopback, setup Silence Keeper (plays silent buffer in shared mode to ensure loopback receives continuous clock ticks)
-                if (!isMic)
+                // 2. Setup Silence Keeper (plays silent buffer in shared mode to ensure loopback receives continuous clock ticks)
+                try
                 {
-                    try
+                    object objSilence;
+                    if (device.Activate(ref iidClient, 1, IntPtr.Zero, out objSilence) == 0 && objSilence != null)
                     {
-                        object objSilence;
-                        if (device.Activate(ref iidClient, 1, IntPtr.Zero, out objSilence) == 0 && objSilence != null)
+                        silenceAudioClient = (IAudioClient)objSilence;
+                        Guid empty = Guid.Empty;
+                        if (silenceAudioClient.Initialize(AudioClientShareMode.Shared, AudioClientStreamFlags.None, 20000000, 0, pFormat, ref empty) == 0)
                         {
-                            silenceAudioClient = (IAudioClient)objSilence;
-                            Guid empty = Guid.Empty;
-                            if (silenceAudioClient.Initialize(AudioClientShareMode.Shared, AudioClientStreamFlags.None, 20000000, 0, pFormat, ref empty) == 0)
+                            object objRender;
+                            Guid iidRender = WasapiGuids.IID_IAudioRenderClient;
+                            if (silenceAudioClient.GetService(ref iidRender, out objRender) == 0 && objRender != null)
                             {
-                                object objRender;
-                                Guid iidRender = WasapiGuids.IID_IAudioRenderClient;
-                                if (silenceAudioClient.GetService(ref iidRender, out objRender) == 0 && objRender != null)
+                                silenceRenderClient = (IAudioRenderClient)objRender;
+                                uint bufferSize;
+                                silenceAudioClient.GetBufferSize(out bufferSize);
+                                IntPtr buf;
+                                if (silenceRenderClient.GetBuffer(bufferSize, out buf) == 0)
                                 {
-                                    silenceRenderClient = (IAudioRenderClient)objRender;
-                                    uint bufferSize;
-                                    silenceAudioClient.GetBufferSize(out bufferSize);
-                                    IntPtr buf;
-                                    if (silenceRenderClient.GetBuffer(bufferSize, out buf) == 0)
-                                    {
-                                        byte[] zeros = new byte[bufferSize * fmt.nBlockAlign];
-                                        Marshal.Copy(zeros, 0, buf, zeros.Length);
-                                        silenceRenderClient.ReleaseBuffer(bufferSize, AudioClientBufferFlags.Silent);
-                                    }
-                                    silenceAudioClient.Start();
+                                    byte[] zeros = new byte[bufferSize * fmt.nBlockAlign];
+                                    Marshal.Copy(zeros, 0, buf, zeros.Length);
+                                    silenceRenderClient.ReleaseBuffer(bufferSize, AudioClientBufferFlags.Silent);
                                 }
+                                silenceAudioClient.Start();
                             }
                         }
                     }
-                    catch { }
                 }
+                catch { }
 
-                // 3. Initialize Stream (Loopback flag only for render devices)
-                AudioClientStreamFlags streamFlags = isMic ? AudioClientStreamFlags.None : AudioClientStreamFlags.Loopback;
+                // 3. Initialize Loopback
                 Guid emptyGuid = Guid.Empty;
-                hr = captureAudioClient.Initialize(AudioClientShareMode.Shared, streamFlags, 20000000, 0, pFormat, ref emptyGuid);
+                hr = captureAudioClient.Initialize(AudioClientShareMode.Shared, AudioClientStreamFlags.Loopback, 20000000, 0, pFormat, ref emptyGuid);
                 if (hr != 0)
                 {
-                    throw new Exception("IAudioClient Initialisierung fehlgeschlagen (0x" + hr.ToString("X8") + ")");
+                    throw new Exception("IAudioClient Loopback Initialisierung fehlgeschlagen (0x" + hr.ToString("X8") + ")");
                 }
 
                 object objCapture;
@@ -386,38 +379,38 @@ namespace ErAudioTool.Audio
                             captureClient.ReleaseBuffer(numFramesToRead);
                         }
 
-                        hr = captureClient.GetNextPacketSize(out packetSize);
-                        if (hr != 0) break;
+                        captureClient.GetNextPacketSize(out packetSize);
                     }
 
-                    // Dispatch Peak Event during active recording
+                    // Periodic stats and peak update (every 50ms)
                     if ((DateTime.UtcNow - lastStatsTime).TotalMilliseconds >= 50)
                     {
-                        float master = Math.Max(maxLeft, maxRight);
+                        lastStatsTime = DateTime.UtcNow;
+                        TimeSpan currentElapsed = _accumulatedTime + (_recordStopwatch.IsRunning ? _recordStopwatch.Elapsed : TimeSpan.Zero);
+                        long currentBytes = _writer != null ? _writer.TotalDataBytes : 0;
+
                         var peakHandler = PeakUpdated;
                         if (peakHandler != null)
                         {
-                            peakHandler(this, new PeakEventArgs(maxLeft, maxRight, master));
+                            float master = Math.Max(maxLeft, maxRight);
+                            try { peakHandler(this, new PeakEventArgs(maxLeft, maxRight, master)); } catch { }
                         }
+
+                        // Decay peak values
                         maxLeft = 0f;
                         maxRight = 0f;
 
-                        // Stats Event
                         var statsHandler = StatsUpdated;
                         if (statsHandler != null)
                         {
-                            TimeSpan currentElapsed = _accumulatedTime + (_isPaused ? TimeSpan.Zero : _recordStopwatch.Elapsed);
-                            long bytesWritten = _writer != null ? _writer.TotalDataBytes : 0;
-                            statsHandler(this, new StatsEventArgs(currentElapsed, bytesWritten, _totalFrames));
+                            try { statsHandler(this, new StatsEventArgs(currentElapsed, currentBytes, _totalFrames)); } catch { }
                         }
-
-                        lastStatsTime = DateTime.UtcNow;
                     }
 
-                    Thread.Sleep(5);
+                    Thread.Sleep(8);
                 }
 
-                // Finalize recording
+                // 6. Finalize recording
                 if (_recordStopwatch != null)
                 {
                     _recordStopwatch.Stop();
@@ -430,9 +423,17 @@ namespace ErAudioTool.Audio
                     _writer = null;
                 }
 
-                if (File.Exists(finalFile))
+                try
                 {
-                    fileLength = new FileInfo(finalFile).Length;
+                    var fi = new FileInfo(finalFile);
+                    fileLength = fi.Exists ? fi.Length : 0;
+                }
+                catch { }
+
+                var finHandler = RecordingFinished;
+                if (finHandler != null)
+                {
+                    try { finHandler(this, new FinishedEventArgs(finalFile, duration, fileLength)); } catch { }
                 }
             }
             catch (Exception ex)
@@ -445,26 +446,22 @@ namespace ErAudioTool.Audio
             }
             finally
             {
+                if (captureAudioClient != null)
+                {
+                    try { captureAudioClient.Stop(); } catch { }
+                }
+                if (silenceAudioClient != null)
+                {
+                    try { silenceAudioClient.Stop(); } catch { }
+                }
                 if (pFormat != IntPtr.Zero)
                 {
-                    Marshal.FreeCoTaskMem(pFormat);
-                    pFormat = IntPtr.Zero;
+                    try { Marshal.FreeCoTaskMem(pFormat); } catch { }
                 }
-
-                try { if (captureAudioClient != null) { captureAudioClient.Stop(); } } catch { }
-                try { if (silenceAudioClient != null) { silenceAudioClient.Stop(); } } catch { }
-
                 if (_writer != null)
                 {
                     try { _writer.Dispose(); } catch { }
                     _writer = null;
-                }
-
-                // Trigger Finished event
-                var finishHandler = RecordingFinished;
-                if (finishHandler != null && fileLength > 0)
-                {
-                    try { finishHandler(this, new FinishedEventArgs(finalFile, duration, fileLength)); } catch { }
                 }
             }
         }
@@ -489,93 +486,57 @@ namespace ErAudioTool.Audio
 
             while (!_stopMeter)
             {
-                if (_state == RecordingState.Recording)
-                {
-                    // In recording mode, peak is computed directly from stream samples
-                    Thread.Sleep(50);
-                    continue;
-                }
-
                 try
                 {
-                    string targetId = _selectedDevice != null ? _selectedDevice.Id : null;
-                    if (meter == null || targetId != lastDevId)
+                    // Only run idle meter when NOT actively recording (during recording, CaptureLoop handles peaks)
+                    if (_state == RecordingState.Idle)
                     {
-                        lastDevId = targetId;
-                        meter = null;
-                        currentDev = AudioDeviceEnumerator.ActivateDevice(targetId);
-                        if (currentDev != null)
+                        AudioDeviceInfo devInfo = _selectedDevice ?? AudioDeviceEnumerator.GetDefaultRenderDevice();
+                        if (devInfo != null)
                         {
-                            object objMeter;
-                            Guid iidMeter = WasapiGuids.IID_IAudioMeterInformation;
-                            if (currentDev.Activate(ref iidMeter, 1, IntPtr.Zero, out objMeter) == 0 && objMeter != null)
+                            if (devInfo.Id != lastDevId || meter == null)
                             {
-                                meter = (IAudioMeterInformation)objMeter;
-                            }
-                        }
-                    }
-
-                    if (meter != null)
-                    {
-                        float peak = 0f;
-                        if (meter.GetPeakValue(out peak) == 0)
-                        {
-                            uint channels = 2;
-                            meter.GetMeteringChannelCount(out channels);
-                            float left = peak;
-                            float right = peak;
-
-                            if (channels >= 2)
-                            {
-                                float[] chPeaks = new float[channels];
-                                if (meter.GetChannelsPeakValues(channels, chPeaks) == 0)
+                                lastDevId = devInfo.Id;
+                                currentDev = AudioDeviceEnumerator.ActivateDevice(devInfo.Id);
+                                if (currentDev != null)
                                 {
-                                    left = chPeaks[0];
-                                    right = chPeaks[1];
+                                    object objMeter;
+                                    Guid iidMeter = WasapiGuids.IID_IAudioMeterInformation;
+                                    if (currentDev.Activate(ref iidMeter, 1, IntPtr.Zero, out objMeter) == 0 && objMeter != null)
+                                    {
+                                        meter = (IAudioMeterInformation)objMeter;
+                                    }
                                 }
                             }
 
-                            var handler = PeakUpdated;
-                            if (handler != null)
+                            if (meter != null)
                             {
-                                handler(this, new PeakEventArgs(left, right, peak));
+                                float masterPeak = 0;
+                                if (meter.GetPeakValue(out masterPeak) == 0)
+                                {
+                                    var handler = PeakUpdated;
+                                    if (handler != null)
+                                    {
+                                        try { handler(this, new PeakEventArgs(masterPeak, masterPeak, masterPeak)); } catch { }
+                                    }
+                                }
                             }
                         }
                     }
                 }
                 catch { }
 
-                Thread.Sleep(40);
+                Thread.Sleep(40); // 25 fps idle metering
             }
         }
 
         public void Dispose()
         {
+            StopRecording();
             _stopMeter = true;
-            _stopCapture = true;
-
-            try
+            if (_meterThread != null && _meterThread.IsAlive)
             {
-                if (_meterThread != null && _meterThread.IsAlive)
-                {
-                    _meterThread.Join(500);
-                }
-            }
-            catch { }
-
-            try
-            {
-                if (_captureThread != null && _captureThread.IsAlive)
-                {
-                    _captureThread.Join(1000);
-                }
-            }
-            catch { }
-
-            if (_writer != null)
-            {
-                try { _writer.Dispose(); } catch { }
-                _writer = null;
+                _meterThread.Join(500);
             }
         }
     }
