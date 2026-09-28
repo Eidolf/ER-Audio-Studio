@@ -91,7 +91,30 @@ namespace ErAudioTool.Audio
             // Use simpler essentials build (smaller download)
             string url = FFMPEG_ESSENTIALS_URL;
 
+            // Enable TLS 1.2 for modern HTTPS connections (required for .NET 4.0)
+            try
+            {
+                System.Net.ServicePointManager.SecurityProtocol =
+                    (System.Net.SecurityProtocolType)3072; // TLS 1.2
+            }
+            catch
+            {
+                // Fallback: try setting multiple protocols
+                try
+                {
+                    System.Net.ServicePointManager.SecurityProtocol =
+                        System.Net.SecurityProtocolType.Ssl3 |
+                        System.Net.SecurityProtocolType.Tls |
+                        (System.Net.SecurityProtocolType)768 |  // Tls11
+                        (System.Net.SecurityProtocolType)3072;  // Tls12
+                }
+                catch { }
+            }
+
             WebClient client = new WebClient();
+
+            // Add headers to appear as a regular browser
+            client.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
 
             client.DownloadProgressChanged += (s, e) =>
             {
