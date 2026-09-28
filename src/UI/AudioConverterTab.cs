@@ -227,12 +227,13 @@ namespace ErAudioTool.UI
 
             _formatComboBox = new ComboBox
             {
-                Height = 32,
-                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Height = 36,
+                Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
                 Foreground = Brushes.White,
                 BorderBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
-                FontSize = 12,
-                VerticalContentAlignment = VerticalAlignment.Center
+                FontSize = 13,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(8, 4, 8, 4)
             };
 
             foreach (AudioFormat format in Enum.GetValues(typeof(AudioFormat)))
@@ -258,12 +259,13 @@ namespace ErAudioTool.UI
 
             _bitrateComboBox = new ComboBox
             {
-                Height = 32,
-                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Height = 36,
+                Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
                 Foreground = Brushes.White,
                 BorderBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
-                FontSize = 12,
-                VerticalContentAlignment = VerticalAlignment.Center
+                FontSize = 13,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(8, 4, 8, 4)
             };
             _bitrateComboBox.Items.Add("128 kbps");
             _bitrateComboBox.Items.Add("192 kbps");
@@ -287,12 +289,13 @@ namespace ErAudioTool.UI
 
             _sampleRateComboBox = new ComboBox
             {
-                Height = 32,
-                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Height = 36,
+                Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
                 Foreground = Brushes.White,
                 BorderBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
-                FontSize = 12,
-                VerticalContentAlignment = VerticalAlignment.Center
+                FontSize = 13,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(8, 4, 8, 4)
             };
             _sampleRateComboBox.Items.Add("Original");
             _sampleRateComboBox.Items.Add("44100 Hz");
@@ -638,7 +641,14 @@ namespace ErAudioTool.UI
         {
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
-                Filter = "Alle Audiodateien|*.wav;*.mp3;*.flac;*.ogg;*.aac;*.m4a;*.wma;*.opus;*.aiff|Alle Dateien (*.*)|*.*",
+                Filter = "Alle Audiodateien|*.wav;*.mp3;*.flac;*.ogg;*.aac;*.m4a;*.wma;*.opus;*.aiff;*.mid;*.midi|" +
+                         "WAV Dateien|*.wav|" +
+                         "MP3 Dateien|*.mp3|" +
+                         "FLAC Dateien|*.flac|" +
+                         "OGG Dateien|*.ogg|" +
+                         "AAC/M4A Dateien|*.aac;*.m4a|" +
+                         "MIDI Dateien|*.mid;*.midi|" +
+                         "Alle Dateien (*.*)|*.*",
                 Title = "Eingangsdatei auswählen"
             };
 
@@ -708,6 +718,22 @@ namespace ErAudioTool.UI
             if (!CodecManager.IsFfmpegInstalled())
             {
                 MessageBox.Show(_parentWindow, "FFmpeg ist nicht installiert. Bitte installieren Sie FFmpeg über 'Codecs verwalten'.", "FFmpeg fehlt", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Check if input is MIDI file
+            string ext = Path.GetExtension(inputFile).ToLowerInvariant();
+            if (ext == ".mid" || ext == ".midi")
+            {
+                MessageBox.Show(_parentWindow,
+                    "MIDI-Dateien können nicht direkt in Audio konvertiert werden.\n\n" +
+                    "MIDI ist ein Notenformat, kein Audioformat. Um MIDI abzuspielen oder zu konvertieren:\n" +
+                    "1. Nutzen Sie einen Software-Synthesizer (z.B. VirtualMIDISynth, FluidSynth)\n" +
+                    "2. Oder importieren Sie die MIDI-Datei in eine DAW (Digital Audio Workstation)\n" +
+                    "3. Rendern Sie dann das Audio und konvertieren Sie die WAV/MP3-Ausgabe",
+                    "MIDI zu Audio nicht unterstützt",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
                 return;
             }
 
@@ -781,7 +807,13 @@ namespace ErAudioTool.UI
         {
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
-                Filter = "Alle Audiodateien|*.wav;*.mp3;*.flac;*.ogg;*.aac;*.m4a;*.wma;*.opus;*.aiff|Alle Dateien (*.*)|*.*",
+                Filter = "Alle Audiodateien|*.wav;*.mp3;*.flac;*.ogg;*.aac;*.m4a;*.wma;*.opus;*.aiff|" +
+                         "WAV Dateien|*.wav|" +
+                         "MP3 Dateien|*.mp3|" +
+                         "FLAC Dateien|*.flac|" +
+                         "OGG Dateien|*.ogg|" +
+                         "AAC/M4A Dateien|*.aac;*.m4a|" +
+                         "Alle Dateien (*.*)|*.*",
                 Title = "Dateien für Batch-Konvertierung auswählen",
                 Multiselect = true
             };
@@ -791,8 +823,16 @@ namespace ErAudioTool.UI
                 AudioFormat format = (AudioFormat)_formatComboBox.SelectedIndex;
                 string ext = AudioConverterService.GetFormatExtension(format);
 
+                int midiCount = 0;
                 foreach (string file in dlg.FileNames)
                 {
+                    string fileExt = Path.GetExtension(file).ToLowerInvariant();
+                    if (fileExt == ".mid" || fileExt == ".midi")
+                    {
+                        midiCount++;
+                        continue; // Skip MIDI files
+                    }
+
                     string dir = Path.GetDirectoryName(file);
                     string baseName = Path.GetFileNameWithoutExtension(file);
                     string outputFile = Path.Combine(dir, baseName + "_converted" + ext);
@@ -816,7 +856,14 @@ namespace ErAudioTool.UI
                     _batchListBox.Items.Add(itemText);
                 }
 
-                _logTextBox.AppendText(string.Format("[{0}] {1} Dateien zur Batch-Liste hinzugefügt.\n", DateTime.Now.ToString("HH:mm:ss"), dlg.FileNames.Length));
+                int addedCount = dlg.FileNames.Length - midiCount;
+                _logTextBox.AppendText(string.Format("[{0}] {1} Dateien zur Batch-Liste hinzugefügt.\n", DateTime.Now.ToString("HH:mm:ss"), addedCount));
+
+                if (midiCount > 0)
+                {
+                    _logTextBox.AppendText(string.Format("[{0}] Warnung: {1} MIDI-Datei(en) übersprungen (MIDI zu Audio nicht unterstützt).\n",
+                        DateTime.Now.ToString("HH:mm:ss"), midiCount));
+                }
             }
         }
 
