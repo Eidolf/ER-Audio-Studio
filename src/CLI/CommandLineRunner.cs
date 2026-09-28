@@ -93,6 +93,10 @@ namespace ErAudioTool.CLI
             Console.WriteLine("OPTIONEN FÜR --midi:");
             Console.WriteLine("  -i, --in <dateipfad>      Eingangs-Audiodatei (WAV, MP3, FLAC, OGG, M4A)");
             Console.WriteLine("  -o, --out <dateipfad>     Zieldateipfad (.mid)");
+            Console.WriteLine("  --bpm <zahl>              Song-Tempo / Takt (Standard: 120)");
+            Console.WriteLine("  --no-drums                Deaktiviert automatische Schlagzeugspur (Kanal 10)");
+            Console.WriteLine("  --no-bass                 Deaktiviert automatische Bassline (Kanal 2)");
+            Console.WriteLine("  --no-chords               Deaktiviert automatische Begleit-Harmonien (Kanal 3)");
             Console.WriteLine("  -s, --threshold <dB>      Lautstärke-Schwellenwert (Standard: -42 dB)");
             Console.WriteLine("  --min-dur <sekunden>      Minimale Notenlänge (Standard: 0.08 s)");
             Console.WriteLine("  --no-cli                  Erzwingt native C# Tonhöhenerkennung");
@@ -392,6 +396,17 @@ namespace ErAudioTool.CLI
                 }
             }
 
+            string bpmStr = null;
+            if (args.TryGetValue("bpm", out bpmStr) || args.TryGetValue("tempo", out bpmStr))
+            {
+                int bpm;
+                if (int.TryParse(bpmStr, out bpm)) opts.TempoBpm = Math.Max(40, Math.Min(300, bpm));
+            }
+
+            if (args.ContainsKey("no-drums")) opts.AddDrums = false;
+            if (args.ContainsKey("no-bass")) opts.AddBass = false;
+            if (args.ContainsKey("no-chords")) opts.AddChords = false;
+
             if (args.ContainsKey("no-cli"))
             {
                 opts.PreferAiCliIfAvailable = false;
@@ -399,12 +414,16 @@ namespace ErAudioTool.CLI
 
             Console.WriteLine();
             Console.WriteLine("===============================================================================");
-            Console.WriteLine("  ER AUDIO - AUDIO ZU MIDI KONVERTER");
+            Console.WriteLine("  ER AUDIO - AUDIO ZU MIDI KONVERTER (MULTI-INSTRUMENT)");
             Console.WriteLine("===============================================================================");
             Console.WriteLine("  Eingabe-Audio : " + inPath);
             Console.WriteLine("  Ausgabe-MIDI  : " + outPath);
+            Console.WriteLine("  Tempo         : " + opts.TempoBpm + " BPM");
+            Console.WriteLine("  Drums (Ch 10) : " + (opts.AddDrums ? "Aktiv (Kick/Snare/Hi-Hat)" : "Aus"));
+            Console.WriteLine("  Bass (Ch 2)   : " + (opts.AddBass ? "Aktiv (Electric Bass)" : "Aus"));
+            Console.WriteLine("  Akkorde (Ch 3): " + (opts.AddChords ? "Aktiv (Gitarre/Harmonie)" : "Aus"));
             Console.WriteLine("  Schwellenwert : " + opts.EnergyThresholdDb + " dB");
-            Console.WriteLine("  Min. Länge    : " + (opts.MinNoteDurationSec * 1000.0) + " ms");
+            Console.WriteLine("  Min. Notenzeit: " + (opts.MinNoteDurationSec * 1000.0) + " ms");
             Console.WriteLine("===============================================================================");
             Console.WriteLine();
 

@@ -10,16 +10,27 @@ namespace ErAudioTool.Audio
         public double StartTimeSec { get; set; }
         public double DurationSec { get; set; }
         public int Velocity { get; set; }
+        public int Channel { get; set; } // 0 = Ch1 (Lead/Piano), 1 = Ch2 (Bass), 9 = Ch10 (Drums)
 
         public MidiNote()
         {
             Velocity = 96;
+            Channel = 0;
         }
 
         public string NoteName
         {
             get
             {
+                if (Channel == 9)
+                {
+                    if (NoteNumber == 36) return "Bass Drum (Kick)";
+                    if (NoteNumber == 38 || NoteNumber == 40) return "Snare";
+                    if (NoteNumber == 42) return "Closed Hi-Hat";
+                    if (NoteNumber == 46) return "Open Hi-Hat";
+                    return "Drum (" + NoteNumber + ")";
+                }
+
                 string[] names = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
                 int oct = (NoteNumber / 12) - 1;
                 return names[NoteNumber % 12] + oct;
@@ -43,7 +54,7 @@ namespace ErAudioTool.Audio
                 // Header Chunk 'MThd'
                 bw.Write(new char[] { 'M', 'T', 'h', 'd' });
                 WriteBigEndian32(bw, 6); // Length = 6
-                WriteBigEndian16(bw, 0); // Format 0 (Single track)
+                WriteBigEndian16(bw, 0); // Format 0 (Single track with multi-channel messages)
                 WriteBigEndian16(bw, 1); // 1 Track
                 WriteBigEndian16(bw, ticksPerQuarter);
 
@@ -59,7 +70,6 @@ namespace ErAudioTool.Audio
 
         private static byte[] BuildTrackData(List<MidiNote> notes, int tempoBpm, short ticksPerQuarter)
         {
-            // Calculate tick position for each note-on and note-off
             double secondsPerQuarter = 60.0 / tempoBpm;
             double ticksPerSecond = ticksPerQuarter / secondsPerQuarter;
 
@@ -73,12 +83,13 @@ namespace ErAudioTool.Audio
 
                 byte noteVal = (byte)Math.Max(0, Math.Min(127, n.NoteNumber));
                 byte velVal = (byte)Math.Max(1, Math.Min(127, n.Velocity));
+                int channel = Math.Max(0, Math.Min(15, n.Channel));
 
                 // Note On
                 events.Add(new MidiRawEvent
                 {
                     Tick = startTick,
-                    Status = 0x90, // Note On channel 0
+                    Status = (byte)(0x90 | channel),
                     Data1 = noteVal,
                     Data2 = velVal,
                     IsNoteOff = false
@@ -88,7 +99,7 @@ namespace ErAudioTool.Audio
                 events.Add(new MidiRawEvent
                 {
                     Tick = endTick,
-                    Status = 0x80, // Note Off channel 0
+                    Status = (byte)(0x80 | channel),
                     Data1 = noteVal,
                     Data2 = 0,
                     IsNoteOff = true
@@ -106,7 +117,7 @@ namespace ErAudioTool.Audio
             using (var ms = new MemoryStream())
             using (var bw = new BinaryWriter(ms))
             {
-                // Write tempo meta event at tick 0: 500000 microseconds per beat (120 BPM)
+                // Write tempo meta event at tick 0
                 int usPerBeat = (int)(60000000.0 / tempoBpm);
                 WriteVarLen(bw, 0); // delta time
                 bw.Write((byte)0xFF); // Meta
@@ -115,6 +126,22 @@ namespace ErAudioTool.Audio
                 bw.Write((byte)((usPerBeat >> 16) & 0xFF));
                 bw.Write((byte)((usPerBeat >> 8) & 0xFF));
                 bw.Write((byte)(usPerBeat & 0xFF));
+
+                // Program Change Events at Tick 0:
+                // Channel 0 (Melody): Acoustic Grand Piano (Program 0)
+                WriteVarLen(bw, 0);
+                bw.Write((byte)0xC0); // Program change Ch 0
+                bw.Write((byte)0);    // Acoustic Grand Piano
+
+                // Channel 1 (Bass): Electric Bass (Finger) (Program 33)
+                WriteVarLen(bw, 0);
+                bw.Write((byte)0xC1); // Program change Ch 1
+                bw.Write((byte)33);   // Electric Bass finger
+
+                // Channel 2 (Harmony/Chords): Acoustic Guitar (Steel) (Program 25)
+                WriteVarLen(bw, 0);
+                bw.Write((byte)0xC2); // Program change Ch 2
+                bw.Write((byte)25);   // Acoustic Guitar steel
 
                 long currentTick = 0;
                 foreach (var ev in events)

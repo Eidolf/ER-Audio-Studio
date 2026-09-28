@@ -19,11 +19,16 @@
 - **Silence-Keeper Technologie:** Verhindert Knackser oder Abreißen der Aufnahme bei leisen Passagen.
 - **Integrierter Player & Historie:** Aufnahmen direkt anhören oder im Dateimanager öffnen.
 
-### 2. 🎹 Audio zu MIDI Konverter (src/Audio/AudioToMidiConverter.cs & MidiWriter.cs)
-- **Native Pitch-Tracking-Engine (C#):** YIN-Autokorrelations-Algorithmus zur präzisen monophonen Noten- & Tonhöhenerkennung aus WAV/MP3/FLAC/OGG/M4A.
-- **Integrierter Standard-MIDI-Writer (SMF Format 0):** Generiert eigenständige `.mid`-Dateien inklusive variabler Delays, Note-On/Off Events, Dynamik/Velocity und Tempo-Metadaten ohne externe Abhängigkeiten.
+### 2. 🎹 Audio zu MIDI & Multi-Instrument Arrangement (src/Audio/AudioToMidiConverter.cs & MidiWriter.cs)
+- **Multi-Instrument Auto-Arrangement für Suno & DAWs:**
+  - **Drums & Takt (Kanal 10):** Vollwertiger Beat mit Kick (Bassdrum auf 1 & 3), Snare (auf 2 & 4) und Closed Hi-Hat (Achtel-Groove) synchronisiert auf das Wunsch-Tempo.
+  - **Bassline (Kanal 2):** Automatisches Fundament (Electric Bass), das den Grundtönen der Melodie eine Oktave tiefer folgt.
+  - **Akkord-Harmonien (Kanal 3):** Begleitende Terz- und Quint-Harmonien (Acoustic Guitar/Pad).
+  - **Melodiespur (Kanal 1):** Aus der Audioaufnahme isolierte Lead-Melodie (Acoustic Grand Piano).
+- **Native Pitch-Tracking-Engine (C#):** YIN-Autokorrelations-Algorithmus zur präzisen monophonen Noten- & Tonhöhenerkennung aus WAV/MP3/FLAC/OGG/M4A (.NET 4.0 & C# 5 kompatibel).
+- **Integrierter Standard-MIDI-Writer (SMF Format 0 Multi-Channel):** Generiert eigenständige `.mid`-Dateien inklusive variabler Delays, Note-On/Off Events, Dynamik/Velocity, GM-Program-Changes und Tempo-Metadaten ohne externe Abhängigkeiten.
 - **Optionale KI-/CLI-Erweiterung:** Automatische Einbindung fortschrittlicher Transkriptions-Engines (`basic-pitch`, `aubionotes`), wenn auf dem System verfügbar, mit unterbrechungsfreiem Fallback auf die native C#-Engine.
-- **Interaktiver Studio-Tab & Ein-Klick-Workflow:** Aufnahmen direkt aus der Recorder-Historie mit einem Klick in MIDI transformieren und Noten im Protokoll inspizieren.
+- **Interaktiver Studio-Tab & Ein-Klick-Workflow:** Aufnahmen direkt aus der Recorder-Historie mit einem Klick in MIDI transformieren, Tempo (BPM) und Begleitinstrumente anpassen.
 
 ### 3. 🔄 Audio-Konverter (src/Audio/AudioConverterService.cs)
 - Plattformunabhängige Konvertierung zwischen gängigen Formaten: **MP3, WAV, FLAC, OGG, AAC/M4A**.

@@ -62,6 +62,11 @@ namespace ErAudioTool.UI
         private TextBlock _midiThresholdText;
         private Slider _midiMinDurationSlider;
         private TextBlock _midiMinDurationText;
+        private Slider _midiBpmSlider;
+        private TextBlock _midiBpmText;
+        private CheckBox _midiAddDrumsCheckBox;
+        private CheckBox _midiAddBassCheckBox;
+        private CheckBox _midiAddChordsCheckBox;
         private CheckBox _midiUseCliCheckBox;
         private Button _btnConvertMidi;
         private TextBox _midiLogTextBox;
@@ -674,18 +679,95 @@ namespace ErAudioTool.UI
             };
             paramStack.Children.Add(_midiMinDurationSlider);
 
+            // Tempo BPM Slider
+            var bpmHeader = new Grid();
+            bpmHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            bpmHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var bpmLabel = new TextBlock
+            {
+                Text = "Song-Tempo (BPM / Taktgeschwindigkeit):",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225))
+            };
+            bpmHeader.Children.Add(bpmLabel);
+
+            _midiBpmText = new TextBlock
+            {
+                Text = "120 BPM",
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248))
+            };
+            Grid.SetColumn(_midiBpmText, 1);
+            bpmHeader.Children.Add(_midiBpmText);
+            paramStack.Children.Add(bpmHeader);
+
+            _midiBpmSlider = new Slider
+            {
+                Minimum = 60.0,
+                Maximum = 180.0,
+                Value = 120.0,
+                TickFrequency = 1.0,
+                IsSnapToTickEnabled = true,
+                Margin = new Thickness(0, 6, 0, 14)
+            };
+            _midiBpmSlider.ValueChanged += (s, e) =>
+            {
+                if (_midiBpmText != null) _midiBpmText.Text = string.Format("{0:0} BPM", _midiBpmSlider.Value);
+            };
+            paramStack.Children.Add(_midiBpmSlider);
+
+            // Multi-Instrument Arrangement Section
+            var arrLabel = new TextBlock
+            {
+                Text = "INSTRUMENTAL-ARRANGEMENT FÜR SUNO / DAWS:",
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            paramStack.Children.Add(arrLabel);
+
+            _midiAddDrumsCheckBox = new CheckBox
+            {
+                Content = "🥁 Takt & Beat hinzufügen (Kanal 10: Kick, Snare & Hi-Hat)",
+                IsChecked = true,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+            paramStack.Children.Add(_midiAddDrumsCheckBox);
+
+            _midiAddBassCheckBox = new CheckBox
+            {
+                Content = "🎸 Bassline / Fundament erzeugen (Kanal 2: Electric Bass)",
+                IsChecked = true,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+            paramStack.Children.Add(_midiAddBassCheckBox);
+
+            _midiAddChordsCheckBox = new CheckBox
+            {
+                Content = "✨ Harmonie-Akkorde / Rhythmusgitarre (Kanal 3: Acoustic Guitar)",
+                IsChecked = true,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            paramStack.Children.Add(_midiAddChordsCheckBox);
+
             // CLI Tool Option Checkbox
             _midiUseCliCheckBox = new CheckBox
             {
-                Content = "Erweiterte KI/CLI-Erkennung bevorzugen falls installiert (basic-pitch / aubio), sonst native C# YIN-Engine",
+                Content = "Erweiterte KI/CLI-Erkennung bevorzugen falls installiert (basic-pitch / aubio)",
                 IsChecked = true,
-                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
-                Margin = new Thickness(0, 4, 0, 12)
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                Margin = new Thickness(0, 0, 0, 14)
             };
             paramStack.Children.Add(_midiUseCliCheckBox);
 
             // Convert Button
-            _btnConvertMidi = CreateStyledButton("🎹  Audio zu MIDI konvertieren", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 42, 280);
+            _btnConvertMidi = CreateStyledButton("🎹  Multi-Instrument MIDI erstellen", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 42, 290);
             _btnConvertMidi.FontWeight = FontWeights.Bold;
             _btnConvertMidi.FontSize = 13;
             _btnConvertMidi.HorizontalAlignment = HorizontalAlignment.Center;
@@ -1235,6 +1317,10 @@ namespace ErAudioTool.UI
             {
                 EnergyThresholdDb = _midiThresholdSlider != null ? _midiThresholdSlider.Value : -42.0,
                 MinNoteDurationSec = _midiMinDurationSlider != null ? _midiMinDurationSlider.Value : 0.08,
+                TempoBpm = _midiBpmSlider != null ? (int)Math.Round(_midiBpmSlider.Value) : 120,
+                AddDrums = _midiAddDrumsCheckBox != null && _midiAddDrumsCheckBox.IsChecked == true,
+                AddBass = _midiAddBassCheckBox != null && _midiAddBassCheckBox.IsChecked == true,
+                AddChords = _midiAddChordsCheckBox != null && _midiAddChordsCheckBox.IsChecked == true,
                 PreferAiCliIfAvailable = _midiUseCliCheckBox != null && _midiUseCliCheckBox.IsChecked == true
             };
 

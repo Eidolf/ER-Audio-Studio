@@ -13,6 +13,9 @@ namespace ErAudioTool.Audio
         public double MinNoteDurationSec { get; set; }
         public int TempoBpm { get; set; }
         public bool PreferAiCliIfAvailable { get; set; }
+        public bool AddDrums { get; set; }
+        public bool AddBass { get; set; }
+        public bool AddChords { get; set; }
 
         public AudioToMidiOptions()
         {
@@ -22,6 +25,9 @@ namespace ErAudioTool.Audio
             MinNoteDurationSec = 0.08;
             TempoBpm = 120;
             PreferAiCliIfAvailable = true;
+            AddDrums = true;
+            AddBass = true;
+            AddChords = true;
         }
     }
 
@@ -121,14 +127,48 @@ namespace ErAudioTool.Audio
                 }
 
                 var notes = DetectNotes(samples, sampleRate, options, onLog);
-                result.Notes = notes;
-                result.NoteCount = notes.Count;
+                
+                // Multi-Instrument Auto-Arrangement
+                var arrangedNotes = new List<MidiNote>(notes);
+                if (notes.Count > 0)
+                {
+                    double totalDuration = 0;
+                    foreach (var n in notes)
+                    {
+                        double end = n.StartTimeSec + n.DurationSec;
+                        if (end > totalDuration) totalDuration = end;
+                    }
 
-                MidiWriter.SaveMidiFile(outputMidiFile, notes, options.TempoBpm);
+                    if (options.AddBass)
+                    {
+                        var bassNotes = GenerateBassline(notes, options.TempoBpm);
+                        arrangedNotes.AddRange(bassNotes);
+                        if (onLog != null) onLog(string.Format("Auto-Arrangement: {0} Bass-Noten hinzugefügt (Kanal 2 - Electric Bass).", bassNotes.Count));
+                    }
+
+                    if (options.AddChords)
+                    {
+                        var chordNotes = GenerateHarmonies(notes, options.TempoBpm);
+                        arrangedNotes.AddRange(chordNotes);
+                        if (onLog != null) onLog(string.Format("Auto-Arrangement: {0} Harmonie-/Gitarren-Noten hinzugefügt (Kanal 3).", chordNotes.Count));
+                    }
+
+                    if (options.AddDrums && totalDuration > 0.5)
+                    {
+                        var drumNotes = GenerateDrums(totalDuration, options.TempoBpm);
+                        arrangedNotes.AddRange(drumNotes);
+                        if (onLog != null) onLog(string.Format("Auto-Arrangement: {0} Drum-Events hinzugefügt (Kanal 10 - Beat: Kick, Snare, Hi-Hat).", drumNotes.Count));
+                    }
+                }
+
+                result.Notes = arrangedNotes;
+                result.NoteCount = arrangedNotes.Count;
+
+                MidiWriter.SaveMidiFile(outputMidiFile, arrangedNotes, options.TempoBpm);
 
                 result.Success = true;
-                result.MethodUsed = "Native C# YIN/Autokorrelation";
-                if (onLog != null) onLog(string.Format("Native Konvertierung abgeschlossen: {0} Noten erkannt -> {1}", notes.Count, Path.GetFileName(outputMidiFile)));
+                result.MethodUsed = "Native C# YIN + Auto-Arrangement (Multi-Track)";
+                if (onLog != null) onLog(string.Format("Konvertierung & Arrangement abgeschlossen: {0} Gesamtevents -> {1}", arrangedNotes.Count, Path.GetFileName(outputMidiFile)));
                 return result;
             }
             catch (Exception ex)
@@ -482,6 +522,188 @@ namespace ErAudioTool.Audio
                 if (onLog != null) onLog("[Warnung] Externes Tool Fehler: " + ex.Message);
                 return false;
             }
+        }
+
+        private static List<MidiNote> GenerateDrums(double totalDurationSec, int tempoBpm)
+        {
+            var drums = new List<MidiNote>();
+            double beatSec = 60.0 / Math.Max(40, tempoBpm);
+            double halfBeatSec = beatSec / 2.0; // 8th note
+
+            int totalBeats = (int)Math.Ceiling(totalDurationSec / beatSec);
+
+            for (int b = 0; b < totalBeats; b++)
+            {
+                double time = b * beatSec;
+                if (time >= totalDurationSec) break;
+
+                int measureBeat = b % 4; // 0 = Beat 1, 1 = Beat 2, 2 = Beat 3, 3 = Beat 4
+
+                // Kick (Bass Drum = 36) on Beat 1 and Beat 3
+                if (measureBeat == 0 || measureBeat == 2)
+                {
+                    var kick = new MidiNote
+                    {
+                        NoteNumber = 36,
+                        StartTimeSec = time,
+                        DurationSec = 0.12,
+                        Velocity = measureBeat == 0 ? 110 : 95,
+                        Channel = 9 // Channel 10
+                    };
+                    drums.Add(kick);
+                }
+
+                // Snare (Acoustic Snare = 38) on Beat 2 and Beat 4
+                if (measureBeat == 1 || measureBeat == 3)
+                {
+                    var snare = new MidiNote
+                    {
+                        NoteNumber = 38,
+                        StartTimeSec = time,
+                        DurationSec = 0.12,
+                        Velocity = 100,
+                        Channel = 9 // Channel 10
+                    };
+                    drums.Add(snare);
+                }
+
+                // Closed Hi-Hat (42) on every 8th note
+                var hat1 = new MidiNote
+                {
+                    NoteNumber = 42,
+                    StartTimeSec = time,
+                    DurationSec = 0.06,
+                    Velocity = 80,
+                    Channel = 9
+                };
+                drums.Add(hat1);
+
+                double offBeatTime = time + halfBeatSec;
+                if (offBeatTime < totalDurationSec)
+                {
+                    var hat2 = new MidiNote
+                    {
+                        NoteNumber = 42,
+                        StartTimeSec = offBeatTime,
+                        DurationSec = 0.06,
+                        Velocity = 65,
+                        Channel = 9
+                    };
+                    drums.Add(hat2);
+                }
+            }
+
+            return drums;
+        }
+
+        private static List<MidiNote> GenerateBassline(List<MidiNote> melodyNotes, int tempoBpm)
+        {
+            var bass = new List<MidiNote>();
+            double beatSec = 60.0 / Math.Max(40, tempoBpm);
+            double barSec = beatSec * 4.0; // 1 measure
+
+            if (melodyNotes.Count == 0) return bass;
+
+            double maxTime = 0;
+            foreach (var n in melodyNotes)
+            {
+                double end = n.StartTimeSec + n.DurationSec;
+                if (end > maxTime) maxTime = end;
+            }
+
+            int totalBars = (int)Math.Ceiling(maxTime / barSec);
+
+            for (int bar = 0; bar < totalBars; bar++)
+            {
+                double barStart = bar * barSec;
+                double barEnd = barStart + barSec;
+
+                // Find melody notes in this bar
+                int primaryNote = -1;
+                foreach (var n in melodyNotes)
+                {
+                    if (n.StartTimeSec >= barStart && n.StartTimeSec < barEnd)
+                    {
+                        primaryNote = n.NoteNumber;
+                        break;
+                    }
+                }
+
+                if (primaryNote == -1)
+                {
+                    // Fallback to nearest previous note or C3
+                    primaryNote = 60;
+                }
+
+                // Transpose down to Bass register (approx MIDI 36..48)
+                int bassNote = primaryNote;
+                while (bassNote > 48) bassNote -= 12;
+                while (bassNote < 33) bassNote += 12;
+
+                // Root note sustained or pulsed on Beat 1 and Beat 3
+                var b1 = new MidiNote
+                {
+                    NoteNumber = bassNote,
+                    StartTimeSec = barStart,
+                    DurationSec = beatSec * 1.8,
+                    Velocity = 90,
+                    Channel = 1 // Channel 2
+                };
+                bass.Add(b1);
+
+                if (barStart + beatSec * 2.0 < maxTime)
+                {
+                    var b2 = new MidiNote
+                    {
+                        NoteNumber = bassNote,
+                        StartTimeSec = barStart + beatSec * 2.0,
+                        DurationSec = beatSec * 1.8,
+                        Velocity = 85,
+                        Channel = 1 // Channel 2
+                    };
+                    bass.Add(b2);
+                }
+            }
+
+            return bass;
+        }
+
+        private static List<MidiNote> GenerateHarmonies(List<MidiNote> melodyNotes, int tempoBpm)
+        {
+            var harmony = new List<MidiNote>();
+            double beatSec = 60.0 / Math.Max(40, tempoBpm);
+
+            foreach (var n in melodyNotes)
+            {
+                if (n.Channel != 0) continue;
+                if (n.DurationSec < 0.1) continue;
+
+                // Add harmonic interval (a third or fifth below/above)
+                int thirdInterval = 4; // major 3rd
+                int fifthInterval = 7; // perfect 5th
+
+                var h1 = new MidiNote
+                {
+                    NoteNumber = Math.Max(36, Math.Min(110, n.NoteNumber - 12 + thirdInterval)),
+                    StartTimeSec = n.StartTimeSec,
+                    DurationSec = n.DurationSec,
+                    Velocity = Math.Max(40, n.Velocity - 20),
+                    Channel = 2 // Channel 3 (Acoustic Guitar/Pad)
+                };
+                harmony.Add(h1);
+
+                var h2 = new MidiNote
+                {
+                    NoteNumber = Math.Max(36, Math.Min(110, n.NoteNumber - 12 + fifthInterval)),
+                    StartTimeSec = n.StartTimeSec,
+                    DurationSec = n.DurationSec,
+                    Velocity = Math.Max(35, n.Velocity - 25),
+                    Channel = 2 // Channel 3
+                };
+                harmony.Add(h2);
+            }
+
+            return harmony;
         }
     }
 }
