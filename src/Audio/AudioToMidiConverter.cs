@@ -7,12 +7,22 @@ namespace ErAudioTool.Audio
 {
     public class AudioToMidiOptions
     {
-        public double MinPitchHz { get; set; } = 55.0; // A1
-        public double MaxPitchHz { get; set; } = 1760.0; // A6
-        public double EnergyThresholdDb { get; set; } = -42.0;
-        public double MinNoteDurationSec { get; set; } = 0.08;
-        public int TempoBpm { get; set; } = 120;
-        public bool PreferAiCliIfAvailable { get; set; } = true;
+        public double MinPitchHz { get; set; }
+        public double MaxPitchHz { get; set; }
+        public double EnergyThresholdDb { get; set; }
+        public double MinNoteDurationSec { get; set; }
+        public int TempoBpm { get; set; }
+        public bool PreferAiCliIfAvailable { get; set; }
+
+        public AudioToMidiOptions()
+        {
+            MinPitchHz = 55.0; // A1
+            MaxPitchHz = 1760.0; // A6
+            EnergyThresholdDb = -42.0;
+            MinNoteDurationSec = 0.08;
+            TempoBpm = 120;
+            PreferAiCliIfAvailable = true;
+        }
     }
 
     public class AudioToMidiResult
@@ -22,7 +32,12 @@ namespace ErAudioTool.Audio
         public int NoteCount { get; set; }
         public string MethodUsed { get; set; }
         public string ErrorMessage { get; set; }
-        public List<MidiNote> Notes { get; set; } = new List<MidiNote>();
+        public List<MidiNote> Notes { get; set; }
+
+        public AudioToMidiResult()
+        {
+            Notes = new List<MidiNote>();
+        }
     }
 
     public static class AudioToMidiConverter

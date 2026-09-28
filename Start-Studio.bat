@@ -5,9 +5,8 @@ echo   ER Audio Studio - Starter
 echo ============================================================
 echo.
 
-if not exist "bin\ErAudioStudio.exe" (
-    echo Erstelle Anwendungs-Binaries...
-    powershell -ExecutionPolicy Bypass -File .\build.ps1
+call .\build.bat
+if %ERRORLEVEL% equ 0 (
+    start "" "bin\ErAudioStudio.exe"
 )
 
-start "" "bin\ErAudioStudio.exe"

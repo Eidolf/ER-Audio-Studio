@@ -9,7 +9,12 @@ namespace ErAudioTool.Audio
         public int NoteNumber { get; set; } // 0..127 (69 = A4 = 440Hz)
         public double StartTimeSec { get; set; }
         public double DurationSec { get; set; }
-        public int Velocity { get; set; } = 96;
+        public int Velocity { get; set; }
+
+        public MidiNote()
+        {
+            Velocity = 96;
+        }
 
         public string NoteName
         {
