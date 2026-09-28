@@ -1,4 +1,4 @@
-﻿# ER Audio Studio - Build Script
+# ER Audio Studio - Build Script
 param(
     [switch]$RunGui,
     [switch]$RunCli
@@ -40,6 +40,8 @@ $srcFiles = @(
     (Join-Path $PSScriptRoot "src\Audio\SimpleAudioPlayer.cs"),
     (Join-Path $PSScriptRoot "src\Audio\AudioAnalyzer.cs"),
     (Join-Path $PSScriptRoot "src\Audio\AudioConverterService.cs"),
+    (Join-Path $PSScriptRoot "src\Audio\MidiWriter.cs"),
+    (Join-Path $PSScriptRoot "src\Audio\AudioToMidiConverter.cs"),
     (Join-Path $PSScriptRoot "src\UI\Localization.cs"),
     (Join-Path $PSScriptRoot "src\UI\VuMeterControl.cs"),
     (Join-Path $PSScriptRoot "src\UI\MainWindow.cs"),

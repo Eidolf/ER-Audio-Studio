@@ -30,6 +30,11 @@ namespace ErAudioTool.CLI
                 return RunRecord(parsed);
             }
 
+            if (parsed.ContainsKey("midi") || parsed.ContainsKey("audio-to-midi") || parsed.ContainsKey("m"))
+            {
+                return RunAudioToMidi(parsed);
+            }
+
             // Default help if unknown arguments
             PrintHelp();
             return 1;
@@ -81,8 +86,16 @@ namespace ErAudioTool.CLI
             Console.WriteLine();
             Console.WriteLine("BEFEHLE:");
             Console.WriteLine("  -r, --record              Startet eine Audioaufnahme über Loopback");
+            Console.WriteLine("  -m, --midi <audiofile>    Konvertiert eine Audiodatei in eine MIDI-Datei (.mid)");
             Console.WriteLine("  -l, --list-devices        Listet alle aktiven Wiedergabegeräte auf");
             Console.WriteLine("  -h, --help                Zeigt diesen Hilfetext an");
+            Console.WriteLine();
+            Console.WriteLine("OPTIONEN FÜR --midi:");
+            Console.WriteLine("  -i, --in <dateipfad>      Eingangs-Audiodatei (WAV, MP3, FLAC, OGG, M4A)");
+            Console.WriteLine("  -o, --out <dateipfad>     Zieldateipfad (.mid)");
+            Console.WriteLine("  -s, --threshold <dB>      Lautstärke-Schwellenwert (Standard: -42 dB)");
+            Console.WriteLine("  --min-dur <sekunden>      Minimale Notenlänge (Standard: 0.08 s)");
+            Console.WriteLine("  --no-cli                  Erzwingt native C# Tonhöhenerkennung");
             Console.WriteLine();
             Console.WriteLine("OPTIONEN FÜR --record:");
             Console.WriteLine("  -d, --device <idx|id|name> Gerät per Index, ID oder Name wählen (Standard: Standardgerät)");
@@ -98,11 +111,8 @@ namespace ErAudioTool.CLI
             Console.WriteLine("  # 10 Sekunden vom Standard-Audiogerät aufnehmen:");
             Console.WriteLine("  ErAudioTool.exe --record --duration 10");
             Console.WriteLine();
-            Console.WriteLine("  # In bestimmte Datei aufnehmen (bis Strg+C gedrückt wird):");
-            Console.WriteLine("  ErAudioTool.exe --record --out \"C:\\Audio\\aufnahme.wav\"");
-            Console.WriteLine();
-            Console.WriteLine("  # In verlustfreiem 32-Bit Float Format aufnehmen:");
-            Console.WriteLine("  ErAudioTool.exe --record --format float32 --out test.wav");
+            Console.WriteLine("  # Audiodatei in MIDI umwandeln:");
+            Console.WriteLine("  ErAudioTool.exe --midi \"aufnahme.wav\" --out \"melodie.mid\"");
             Console.WriteLine("===============================================================================");
             Console.WriteLine();
         }
@@ -326,6 +336,100 @@ namespace ErAudioTool.CLI
             else
             {
                 Console.Error.WriteLine("[FEHLER] Zieldatei wurde nicht erstellt.");
+                return 1;
+            }
+        }
+
+        private static int RunAudioToMidi(Dictionary<string, string> args)
+        {
+            string inPath = null;
+            if (!args.TryGetValue("midi", out inPath) || inPath == "true")
+            {
+                if (!args.TryGetValue("in", out inPath) && !args.TryGetValue("i", out inPath))
+                {
+                    Console.Error.WriteLine("[FEHLER] Keine Eingangs-Audiodatei angegeben. Nutzen Sie --midi <datei> oder -i <datei>.");
+                    return 1;
+                }
+            }
+
+            if (!File.Exists(inPath))
+            {
+                Console.Error.WriteLine("[FEHLER] Datei nicht gefunden: " + inPath);
+                return 1;
+            }
+
+            string outPath = null;
+            if (!args.TryGetValue("out", out outPath) && !args.TryGetValue("o", out outPath))
+            {
+                string dir = Path.GetDirectoryName(inPath);
+                string baseName = Path.GetFileNameWithoutExtension(inPath);
+                outPath = Path.Combine(dir, baseName + ".mid");
+            }
+            else if (!outPath.EndsWith(".mid", StringComparison.OrdinalIgnoreCase))
+            {
+                outPath += ".mid";
+            }
+
+            var opts = new AudioToMidiOptions();
+
+            string threshStr = null;
+            if (args.TryGetValue("threshold", out threshStr) || args.TryGetValue("s", out threshStr))
+            {
+                double thresh;
+                if (double.TryParse(threshStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out thresh))
+                {
+                    opts.EnergyThresholdDb = thresh;
+                }
+            }
+
+            string minDurStr = null;
+            if (args.TryGetValue("min-dur", out minDurStr))
+            {
+                double dur;
+                if (double.TryParse(minDurStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out dur))
+                {
+                    opts.MinNoteDurationSec = dur;
+                }
+            }
+
+            if (args.ContainsKey("no-cli"))
+            {
+                opts.PreferAiCliIfAvailable = false;
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("===============================================================================");
+            Console.WriteLine("  ER AUDIO - AUDIO ZU MIDI KONVERTER");
+            Console.WriteLine("===============================================================================");
+            Console.WriteLine("  Eingabe-Audio : " + inPath);
+            Console.WriteLine("  Ausgabe-MIDI  : " + outPath);
+            Console.WriteLine("  Schwellenwert : " + opts.EnergyThresholdDb + " dB");
+            Console.WriteLine("  Min. Länge    : " + (opts.MinNoteDurationSec * 1000.0) + " ms");
+            Console.WriteLine("===============================================================================");
+            Console.WriteLine();
+
+            var result = AudioToMidiConverter.Convert(inPath, outPath, opts, msg =>
+            {
+                Console.WriteLine("  " + msg);
+            });
+
+            if (result.Success)
+            {
+                Console.WriteLine();
+                Console.WriteLine("===============================================================================");
+                Console.WriteLine("  KONVERTIERUNG ERFOLGREICH ABGESCHLOSSEN!");
+                Console.WriteLine("===============================================================================");
+                Console.WriteLine("  Methode       : " + result.MethodUsed);
+                Console.WriteLine("  Notenanzahl   : " + result.NoteCount);
+                Console.WriteLine("  MIDI-Datei    : " + result.OutputFilePath);
+                Console.WriteLine("===============================================================================");
+                Console.WriteLine();
+                return 0;
+            }
+            else
+            {
+                Console.Error.WriteLine();
+                Console.Error.WriteLine("[FEHLER] Audio-zu-MIDI fehlgeschlagen: " + result.ErrorMessage);
                 return 1;
             }
         }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace ErAudioTool.UI
@@ -25,6 +25,7 @@ namespace ErAudioTool.UI
             // Tabs
             {"TabRecord", "🎙 Aufnahme"},
             {"TabConvert", "🔄 Konverter"},
+            {"TabMidi", "🎹 Audio zu MIDI"},
             {"TabAnalyze", "📊 Audio-Analyse"},
             {"TabSettings", "⚙️ Einstellungen"},
 
@@ -45,6 +46,7 @@ namespace ErAudioTool.UI
             {"StopPlay", "⏹ Stopp"},
             {"Explorer", "📂 Explorer"},
             {"AnalyzeFile", "📊 Analysieren"},
+            {"ConvertToMidi", "🎹 In MIDI umwandeln"},
 
             // Tab 2: Convert
             {"ConvertSection", "AUDIO-KONVERTER"},
@@ -53,6 +55,15 @@ namespace ErAudioTool.UI
             {"Bitrate", "Bitrate:"},
             {"StartConvert", "🔄 Jetzt konvertieren"},
             {"ConvertLog", "Konvertierungs-Protokoll:"},
+
+            // Tab MIDI
+            {"MidiSection", "AUDIO ZU MIDI KONVERTER (PITCH-TRACKING)"},
+            {"MidiInputAudio", "Eingangs-Audiodatei:"},
+            {"MidiOutputMidi", "Ziel-MIDI-Datei (.mid):"},
+            {"MidiSensitivity", "Empfindlichkeit / Min. Lautstärke:"},
+            {"MidiMinNoteDur", "Minimale Notenlänge:"},
+            {"MidiStartConvert", "🎹 Jetzt in MIDI konvertieren"},
+            {"MidiStatusLog", "MIDI-Protokoll & Noten:"},
 
             // Tab 3: Analyze
             {"AnalyzeSection", "TECHNISCHE AUDIO-INSPEKTION"},
@@ -83,6 +94,7 @@ namespace ErAudioTool.UI
             // Tabs
             {"TabRecord", "🎙 Recorder"},
             {"TabConvert", "🔄 Converter"},
+            {"TabMidi", "🎹 Audio to MIDI"},
             {"TabAnalyze", "📊 Audio Inspector"},
             {"TabSettings", "⚙️ Settings"},
 
@@ -103,6 +115,7 @@ namespace ErAudioTool.UI
             {"StopPlay", "⏹ Stop"},
             {"Explorer", "📂 Explorer"},
             {"AnalyzeFile", "📊 Analyze"},
+            {"ConvertToMidi", "🎹 Convert to MIDI"},
 
             // Tab 2: Convert
             {"ConvertSection", "AUDIO CONVERTER"},
@@ -111,6 +124,15 @@ namespace ErAudioTool.UI
             {"Bitrate", "Bitrate:"},
             {"StartConvert", "🔄 Start Conversion"},
             {"ConvertLog", "Conversion Log:"},
+
+            // Tab MIDI
+            {"MidiSection", "AUDIO TO MIDI CONVERTER (PITCH-TRACKING)"},
+            {"MidiInputAudio", "Input Audio File:"},
+            {"MidiOutputMidi", "Target MIDI File (.mid):"},
+            {"MidiSensitivity", "Threshold / Min. Volume:"},
+            {"MidiMinNoteDur", "Minimum Note Duration:"},
+            {"MidiStartConvert", "🎹 Convert to MIDI Now"},
+            {"MidiStatusLog", "MIDI Log & Detected Notes:"},
 
             // Tab 3: Analyze
             {"AnalyzeSection", "TECHNICAL AUDIO INSPECTION"},

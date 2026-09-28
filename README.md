@@ -1,4 +1,4 @@
-﻿# ER-Audio-Studio
+# ER-Audio-Studio
 
 <p align=center>
   <img src=assets/logo.png alt=ER Audio Studio Logo width=160 style=border-radius: 14px; />
@@ -19,18 +19,24 @@
 - **Silence-Keeper Technologie:** Verhindert Knackser oder Abreißen der Aufnahme bei leisen Passagen.
 - **Integrierter Player & Historie:** Aufnahmen direkt anhören oder im Dateimanager öffnen.
 
-### 2. 🔄 Audio-Konverter (src/Audio/AudioConverterService.cs)
+### 2. 🎹 Audio zu MIDI Konverter (src/Audio/AudioToMidiConverter.cs & MidiWriter.cs)
+- **Native Pitch-Tracking-Engine (C#):** YIN-Autokorrelations-Algorithmus zur präzisen monophonen Noten- & Tonhöhenerkennung aus WAV/MP3/FLAC/OGG/M4A.
+- **Integrierter Standard-MIDI-Writer (SMF Format 0):** Generiert eigenständige `.mid`-Dateien inklusive variabler Delays, Note-On/Off Events, Dynamik/Velocity und Tempo-Metadaten ohne externe Abhängigkeiten.
+- **Optionale KI-/CLI-Erweiterung:** Automatische Einbindung fortschrittlicher Transkriptions-Engines (`basic-pitch`, `aubionotes`), wenn auf dem System verfügbar, mit unterbrechungsfreiem Fallback auf die native C#-Engine.
+- **Interaktiver Studio-Tab & Ein-Klick-Workflow:** Aufnahmen direkt aus der Recorder-Historie mit einem Klick in MIDI transformieren und Noten im Protokoll inspizieren.
+
+### 3. 🔄 Audio-Konverter (src/Audio/AudioConverterService.cs)
 - Plattformunabhängige Konvertierung zwischen gängigen Formaten: **MP3, WAV, FLAC, OGG, AAC/M4A**.
 - Bitraten von 128 kbps bis 320 kbps (High Quality) via FFmpeg.
 - Batch-Verarbeitung und saubere Fortschritts-Callbacks.
 
-### 3. 📊 Technische Audio-Analyse & Inspektion (src/Audio/AudioAnalyzer.cs)
+### 4. 📊 Technische Audio-Analyse & Inspektion (src/Audio/AudioAnalyzer.cs)
 - 100% plattformunabhängige C#-PCM-Inspektions-Engine.
 - Ermittlung von Peak-Pegeln (dBFS) pro Kanal.
 - RMS-Lautheit und Berechnung des Dynamikumfangs.
 - Erkennung von Clipping-Verzerrungen und Stille-Anteilen (< -60 dBFS).
 
-### 4. 🌐 Mehrsprachigkeit (src/UI/Localization.cs)
+### 5. 🌐 Mehrsprachigkeit (src/UI/Localization.cs)
 - Zweisprachiges Dictionary-System (Deutsch / Englisch).
 - Dynamisch umschaltbar ohne Neustart.
 

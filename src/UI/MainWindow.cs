@@ -55,6 +55,23 @@ namespace ErAudioTool.UI
 
         private ListBox _historyListBox;
 
+        // MIDI UI Controls
+        private TextBox _midiInputTextBox;
+        private TextBox _midiOutputTextBox;
+        private Slider _midiThresholdSlider;
+        private TextBlock _midiThresholdText;
+        private Slider _midiMinDurationSlider;
+        private TextBlock _midiMinDurationText;
+        private CheckBox _midiUseCliCheckBox;
+        private Button _btnConvertMidi;
+        private TextBox _midiLogTextBox;
+
+        // Tab Controls
+        private Button _btnTabRecord;
+        private Button _btnTabMidi;
+        private UIElement _recordTabContent;
+        private UIElement _midiTabContent;
+
         private string _outputDirectory;
         private DispatcherTimer _uiTimer;
         private TimeSpan _currentDuration;
@@ -171,7 +188,6 @@ namespace ErAudioTool.UI
             textStack.Children.Add(titleText);
             textStack.Children.Add(subText);
             titleStack.Children.Add(textStack);
-
             headerGrid.Children.Add(titleStack);
 
             // Status Pill
@@ -192,19 +208,43 @@ namespace ErAudioTool.UI
                 Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129))
             };
             _statusPillBorder.Child = _statusPillText;
-            Grid.SetColumn(_statusPillBorder, 1);
-            headerGrid.Children.Add(_statusPillBorder);
+
+            // Tab Switcher Buttons in Header
+            var tabsStack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0) };
+
+            _btnTabRecord = CreateStyledButton("🎙 Aufnahme", Color.FromRgb(37, 99, 235), Color.FromRgb(29, 78, 216), 34);
+            _btnTabRecord.Click += (s, e) => SwitchToRecordTab();
+            tabsStack.Children.Add(_btnTabRecord);
+
+            _btnTabMidi = CreateStyledButton("🎹 Audio zu MIDI", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 34);
+            _btnTabMidi.Margin = new Thickness(8, 0, 0, 0);
+            _btnTabMidi.Opacity = 0.6;
+            _btnTabMidi.Click += (s, e) => SwitchToMidiTab();
+            tabsStack.Children.Add(_btnTabMidi);
+
+            var headerRightStack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            headerRightStack.Children.Add(tabsStack);
+            headerRightStack.Children.Add(_statusPillBorder);
+            Grid.SetColumn(headerRightStack, 1);
+            headerGrid.Children.Add(headerRightStack);
 
             headerBorder.Child = headerGrid;
             Grid.SetRow(headerBorder, 0);
             rootGrid.Children.Add(headerBorder);
 
-            // --- MAIN CONTENT (SCROLLABLE) ---
-            var scrollViewer = new ScrollViewer
+            // Container for Tab Views
+            var mainContentGrid = new Grid();
+            Grid.SetRow(mainContentGrid, 1);
+            rootGrid.Children.Add(mainContentGrid);
+
+            // --- TAB 1: RECORD CONTENT (SCROLLABLE) ---
+            var recordScrollViewer = new ScrollViewer
             {
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 Padding = new Thickness(24, 16, 24, 16)
             };
+            _recordTabContent = recordScrollViewer;
+            mainContentGrid.Children.Add(_recordTabContent);
 
             var contentStack = new StackPanel();
 
@@ -470,9 +510,208 @@ namespace ErAudioTool.UI
             histStack.Children.Add(_historyListBox);
             contentStack.Children.Add(CreateCard("AUFNAHMEN DIESER SITZUNG (VERLAUF & VORSCHAU)", histStack));
 
-            scrollViewer.Content = contentStack;
-            Grid.SetRow(scrollViewer, 1);
-            rootGrid.Children.Add(scrollViewer);
+            recordScrollViewer.Content = contentStack;
+
+            // --- TAB 2: MIDI CONVERTER CONTENT (SCROLLABLE) ---
+            var midiScrollViewer = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Padding = new Thickness(24, 16, 24, 16),
+                Visibility = Visibility.Collapsed
+            };
+            _midiTabContent = midiScrollViewer;
+            mainContentGrid.Children.Add(_midiTabContent);
+
+            var midiStack = new StackPanel();
+
+            // Card 1: File Selection
+            var midiFilesCardStack = new StackPanel();
+
+            var inLabel = new TextBlock
+            {
+                Text = "Eingangs-Audiodatei (WAV, MP3, FLAC, OGG, M4A):",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+            midiFilesCardStack.Children.Add(inLabel);
+
+            var inGrid = new Grid();
+            inGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            inGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            _midiInputTextBox = new TextBox
+            {
+                Height = 32,
+                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Foreground = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                FontSize = 12,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(6, 0, 6, 0),
+                Margin = new Thickness(0, 0, 8, 0)
+            };
+            inGrid.Children.Add(_midiInputTextBox);
+
+            var btnBrowseIn = CreateStyledButton("📁 Durchsuchen...", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
+            btnBrowseIn.Click += (s, e) => SelectMidiInputFile();
+            Grid.SetColumn(btnBrowseIn, 1);
+            inGrid.Children.Add(btnBrowseIn);
+            midiFilesCardStack.Children.Add(inGrid);
+
+            var outLabel = new TextBlock
+            {
+                Text = "Ziel MIDI-Datei (.mid):",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Margin = new Thickness(0, 10, 0, 6)
+            };
+            midiFilesCardStack.Children.Add(outLabel);
+
+            var outGrid = new Grid();
+            outGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            outGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            _midiOutputTextBox = new TextBox
+            {
+                Height = 32,
+                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Foreground = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                FontSize = 12,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(6, 0, 6, 0),
+                Margin = new Thickness(0, 0, 8, 0)
+            };
+            outGrid.Children.Add(_midiOutputTextBox);
+
+            var btnBrowseOut = CreateStyledButton("💾 Speicherort...", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
+            btnBrowseOut.Click += (s, e) => SelectMidiOutputFile();
+            Grid.SetColumn(btnBrowseOut, 1);
+            outGrid.Children.Add(btnBrowseOut);
+            midiFilesCardStack.Children.Add(outGrid);
+
+            midiStack.Children.Add(CreateCard("DATEI-AUSWAHL", midiFilesCardStack));
+
+            // Card 2: Pitch & Detection Parameters
+            var paramStack = new StackPanel();
+
+            // Threshold Slider
+            var threshHeader = new Grid();
+            threshHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            threshHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var threshLabel = new TextBlock
+            {
+                Text = "Lautstärke-Schwellenwert (Rauschfilter):",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225))
+            };
+            threshHeader.Children.Add(threshLabel);
+
+            _midiThresholdText = new TextBlock
+            {
+                Text = "-42 dB",
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248))
+            };
+            Grid.SetColumn(_midiThresholdText, 1);
+            threshHeader.Children.Add(_midiThresholdText);
+            paramStack.Children.Add(threshHeader);
+
+            _midiThresholdSlider = new Slider
+            {
+                Minimum = -60.0,
+                Maximum = -15.0,
+                Value = -42.0,
+                TickFrequency = 1.0,
+                IsSnapToTickEnabled = true,
+                Margin = new Thickness(0, 6, 0, 12)
+            };
+            _midiThresholdSlider.ValueChanged += (s, e) =>
+            {
+                if (_midiThresholdText != null) _midiThresholdText.Text = string.Format("{0:0} dB", _midiThresholdSlider.Value);
+            };
+            paramStack.Children.Add(_midiThresholdSlider);
+
+            // Min Duration Slider
+            var durHeader = new Grid();
+            durHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            durHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var durLabel = new TextBlock
+            {
+                Text = "Minimale Notenlänge:",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225))
+            };
+            durHeader.Children.Add(durLabel);
+
+            _midiMinDurationText = new TextBlock
+            {
+                Text = "80 ms",
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248))
+            };
+            Grid.SetColumn(_midiMinDurationText, 1);
+            durHeader.Children.Add(_midiMinDurationText);
+            paramStack.Children.Add(durHeader);
+
+            _midiMinDurationSlider = new Slider
+            {
+                Minimum = 0.03,
+                Maximum = 0.30,
+                Value = 0.08,
+                TickFrequency = 0.01,
+                IsSnapToTickEnabled = true,
+                Margin = new Thickness(0, 6, 0, 12)
+            };
+            _midiMinDurationSlider.ValueChanged += (s, e) =>
+            {
+                if (_midiMinDurationText != null) _midiMinDurationText.Text = string.Format("{0:0} ms", _midiMinDurationSlider.Value * 1000.0);
+            };
+            paramStack.Children.Add(_midiMinDurationSlider);
+
+            // CLI Tool Option Checkbox
+            _midiUseCliCheckBox = new CheckBox
+            {
+                Content = "Erweiterte KI/CLI-Erkennung bevorzugen falls installiert (basic-pitch / aubio), sonst native C# YIN-Engine",
+                IsChecked = true,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Margin = new Thickness(0, 4, 0, 12)
+            };
+            paramStack.Children.Add(_midiUseCliCheckBox);
+
+            // Convert Button
+            _btnConvertMidi = CreateStyledButton("🎹  Audio zu MIDI konvertieren", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 42, 280);
+            _btnConvertMidi.FontWeight = FontWeights.Bold;
+            _btnConvertMidi.FontSize = 13;
+            _btnConvertMidi.HorizontalAlignment = HorizontalAlignment.Center;
+            _btnConvertMidi.Click += (s, e) => ConvertAudioToMidi();
+            paramStack.Children.Add(_btnConvertMidi);
+
+            midiStack.Children.Add(CreateCard("ERKENNUNGS-PARAMETER & AKTION", paramStack));
+
+            // Card 3: Log & Note Inspection
+            var logStack = new StackPanel();
+            _midiLogTextBox = new TextBox
+            {
+                Height = 160,
+                IsReadOnly = true,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
+                FontFamily = new FontFamily("Consolas, Courier New"),
+                FontSize = 11,
+                Text = "Bereit für Konvertierung. Wählen Sie oben eine Audiodatei oder klicken Sie in den Aufnahmen auf '🎹 MIDI'."
+            };
+            logStack.Children.Add(_midiLogTextBox);
+            midiStack.Children.Add(CreateCard("KONVERTIERUNGS-PROTOKOLL & NOTEN-INSPEKTION", logStack));
+
+            midiScrollViewer.Content = midiStack;
 
             // --- FOOTER ---
             var footerBorder = new Border
@@ -886,20 +1125,159 @@ namespace ErAudioTool.UI
             };
             actionsStack.Children.Add(btnPlay);
 
-            var btnShow = CreateStyledButton("📂 Explorer", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 28);
-            btnShow.Click += (s, ev) =>
+            var btnMidi = CreateStyledButton("🎹 MIDI", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 28);
+            btnMidi.Margin = new Thickness(6, 0, 0, 0);
+            btnMidi.Click += (s, ev) =>
             {
-                if (File.Exists(filePath))
-                {
-                    Process.Start("explorer.exe", string.Format("/select,\"{0}\"", filePath));
-                }
+                SwitchToMidiTab(filePath);
             };
-            actionsStack.Children.Add(btnShow);
+            actionsStack.Children.Add(btnMidi);
 
             Grid.SetColumn(actionsStack, 1);
             grid.Children.Add(actionsStack);
 
             _historyListBox.Items.Insert(0, grid);
+        }
+
+        private void SwitchToMidiTab(string filePath = null)
+        {
+            if (_midiTabContent != null)
+            {
+                _recordTabContent.Visibility = Visibility.Collapsed;
+                _midiTabContent.Visibility = Visibility.Visible;
+                _btnTabRecord.Opacity = 0.6;
+                _btnTabMidi.Opacity = 1.0;
+
+                if (!string.IsNullOrEmpty(filePath))
+                {
+                    _midiInputTextBox.Text = filePath;
+                    string outDir = Path.GetDirectoryName(filePath);
+                    string baseName = Path.GetFileNameWithoutExtension(filePath);
+                    _midiOutputTextBox.Text = Path.Combine(outDir, baseName + ".mid");
+                }
+            }
+        }
+
+        private void SwitchToRecordTab()
+        {
+            if (_recordTabContent != null)
+            {
+                _midiTabContent.Visibility = Visibility.Collapsed;
+                _recordTabContent.Visibility = Visibility.Visible;
+                _btnTabMidi.Opacity = 0.6;
+                _btnTabRecord.Opacity = 1.0;
+            }
+        }
+
+        private void SelectMidiInputFile()
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Audiodateien (*.wav;*.mp3;*.ogg;*.flac;*.aac)|*.wav;*.mp3;*.ogg;*.flac;*.aac|WAV Dateien (*.wav)|*.wav|Alle Dateien (*.*)|*.*",
+                Title = "Audiodatei für MIDI-Konvertierung auswählen"
+            };
+            if (dlg.ShowDialog() == true)
+            {
+                _midiInputTextBox.Text = dlg.FileName;
+                string dir = Path.GetDirectoryName(dlg.FileName);
+                string baseName = Path.GetFileNameWithoutExtension(dlg.FileName);
+                _midiOutputTextBox.Text = Path.Combine(dir, baseName + ".mid");
+            }
+        }
+
+        private void SelectMidiOutputFile()
+        {
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "Standard MIDI Dateien (*.mid)|*.mid|Alle Dateien (*.*)|*.*",
+                Title = "Speicherort für MIDI-Datei wählen"
+            };
+            if (!string.IsNullOrEmpty(_midiOutputTextBox.Text))
+            {
+                try
+                {
+                    dlg.InitialDirectory = Path.GetDirectoryName(_midiOutputTextBox.Text);
+                    dlg.FileName = Path.GetFileName(_midiOutputTextBox.Text);
+                }
+                catch { }
+            }
+            if (dlg.ShowDialog() == true)
+            {
+                _midiOutputTextBox.Text = dlg.FileName;
+            }
+        }
+
+        private void ConvertAudioToMidi()
+        {
+            string inFile = _midiInputTextBox.Text.Trim();
+            string outFile = _midiOutputTextBox.Text.Trim();
+
+            if (string.IsNullOrEmpty(inFile) || !File.Exists(inFile))
+            {
+                MessageBox.Show(this, "Bitte wählen Sie eine gültige Eingangs-Audiodatei aus.", "Datei fehlt", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(outFile))
+            {
+                string dir = Path.GetDirectoryName(inFile);
+                outFile = Path.Combine(dir, Path.GetFileNameWithoutExtension(inFile) + ".mid");
+                _midiOutputTextBox.Text = outFile;
+            }
+
+            _btnConvertMidi.IsEnabled = false;
+            _midiLogTextBox.Clear();
+            _midiLogTextBox.AppendText(string.Format("[{0}] Starte Audio zu MIDI Analyse...\n", DateTime.Now.ToString("HH:mm:ss")));
+            _midiLogTextBox.AppendText(string.Format("Audio: {0}\n", inFile));
+            _midiLogTextBox.AppendText(string.Format("MIDI : {0}\n", outFile));
+
+            var opts = new AudioToMidiOptions
+            {
+                EnergyThresholdDb = _midiThresholdSlider != null ? _midiThresholdSlider.Value : -42.0,
+                MinNoteDurationSec = _midiMinDurationSlider != null ? _midiMinDurationSlider.Value : 0.08,
+                PreferAiCliIfAvailable = _midiUseCliCheckBox != null && _midiUseCliCheckBox.IsChecked == true
+            };
+
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                var result = AudioToMidiConverter.Convert(inFile, outFile, opts, msg =>
+                {
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        _midiLogTextBox.AppendText(string.Format("[{0}] {1}\n", DateTime.Now.ToString("HH:mm:ss"), msg));
+                        _midiLogTextBox.ScrollToEnd();
+                    });
+                });
+
+                Dispatcher.InvokeAsync(() =>
+                {
+                    _btnConvertMidi.IsEnabled = true;
+                    if (result.Success)
+                    {
+                        _midiLogTextBox.AppendText(string.Format("\n=== ERFOLG: {0} Noten exportiert ({1}) ===\n", result.NoteCount, result.MethodUsed));
+                        if (result.Notes != null && result.Notes.Count > 0)
+                        {
+                            _midiLogTextBox.AppendText("Erste erkannte Noten:\n");
+                            int showCount = Math.Min(12, result.Notes.Count);
+                            for (int i = 0; i < showCount; i++)
+                            {
+                                var n = result.Notes[i];
+                                _midiLogTextBox.AppendText(string.Format("  {0,2}. Note: {1,-4} (MIDI {2,3}) | Zeit: {3:0.00}s - {4:0.00}s | Vel: {5}\n",
+                                    i + 1, n.NoteName, n.NoteNumber, n.StartTimeSec, n.StartTimeSec + n.DurationSec, n.Velocity));
+                            }
+                            if (result.Notes.Count > showCount)
+                            {
+                                _midiLogTextBox.AppendText(string.Format("  ... und {0} weitere Noten.\n", result.Notes.Count - showCount));
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _midiLogTextBox.AppendText(string.Format("\n[FEHLER] {0}\n", result.ErrorMessage));
+                        MessageBox.Show(this, "Fehler bei Konvertierung: " + result.ErrorMessage, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                });
+            });
         }
     }
 }

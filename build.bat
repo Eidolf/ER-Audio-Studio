@@ -19,7 +19,7 @@ if not exist "bin" mkdir "bin"
 if not exist "recordings" mkdir "recordings"
 
 set "REFS=/r:"%WPF%\WindowsBase.dll" /r:"%WPF%\PresentationCore.dll" /r:"%WPF%\PresentationFramework.dll" /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Xaml.dll"
-set "SOURCES=src\AssemblyInfo.cs src\App.cs src\Audio\WasapiInterop.cs src\Audio\AudioDevice.cs src\Audio\WavWriter.cs src\Audio\WasapiLoopbackEngine.cs src\Audio\SimpleAudioPlayer.cs src\UI\VuMeterControl.cs src\UI\MainWindow.cs src\CLI\CommandLineRunner.cs"
+set "SOURCES=src\AssemblyInfo.cs src\App.cs src\Audio\WasapiInterop.cs src\Audio\AudioDevice.cs src\Audio\WavWriter.cs src\Audio\WasapiLoopbackEngine.cs src\Audio\SimpleAudioPlayer.cs src\Audio\AudioAnalyzer.cs src\Audio\AudioConverterService.cs src\Audio\MidiWriter.cs src\Audio\AudioToMidiConverter.cs src\UI\Localization.cs src\UI\VuMeterControl.cs src\UI\MainWindow.cs src\CLI\CommandLineRunner.cs"
 
 echo 1. Kompiliere GUI-Anwendung (ErAudioTool.exe)...
 "%CSC%" /target:winexe /optimize+ /nologo /out:"bin\ErAudioTool.exe" %REFS% %SOURCES%
