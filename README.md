@@ -13,6 +13,11 @@
 
 ## 🌟 Hauptfunktionen & Architektur
 
+**Drei integrierte Tabs**:
+- 🎙 **Aufnahme**: Loopback & Mikrofon Recording
+- 🔄 **Konverter**: Universal Audio zu Audio Konvertierung
+- 🎹 **Audio zu MIDI**: Pitch-Tracking & Multi-Instrument Arrangement
+
 ### 1. 🎙 Professioneller Loopback & Mikrofon Recorder
 - **Windows (nativ):** Direkte Windows CoreAudio (**WASAPI**) Schnittstelle. Nimmt System-Audio, Browser, Games oder Spotify verlustfrei ohne Stereo Mix oder Virtual-Cable-Treiber auf.
 - **Stereo VU-Meter:** Echte Dezibel (dBFS)-Pegelanzeige in Echtzeit für L/R-Kanäle.
@@ -30,10 +35,13 @@
 - **Optionale KI-/CLI-Erweiterung:** Automatische Einbindung fortschrittlicher Transkriptions-Engines (`basic-pitch`, `aubionotes`), wenn auf dem System verfügbar, mit unterbrechungsfreiem Fallback auf die native C#-Engine.
 - **Interaktiver Studio-Tab & Ein-Klick-Workflow:** Aufnahmen direkt aus der Recorder-Historie mit einem Klick in MIDI transformieren, Tempo (BPM) und Begleitinstrumente anpassen.
 
-### 3. 🔄 Audio-Konverter (src/Audio/AudioConverterService.cs)
-- Plattformunabhängige Konvertierung zwischen gängigen Formaten: **MP3, WAV, FLAC, OGG, AAC/M4A**.
-- Bitraten von 128 kbps bis 320 kbps (High Quality) via FFmpeg.
-- Batch-Verarbeitung und saubere Fortschritts-Callbacks.
+### 3. 🔄 Universal Audio-Konverter (src/Audio/AudioConverterService.cs & CodecManager.cs)
+- **Any Audio zu Any Audio**: Konvertierung zwischen allen gängigen Formaten: **MP3, WAV, FLAC, OGG, AAC/M4A, Opus, WMA, AIFF, ALAC**.
+- **Integriertes Codec-Management**: Automatischer FFmpeg-Download & Installation direkt aus der Anwendung.
+- **Einzeldatei & Batch-Modus**: Konvertiere eine oder mehrere Dateien gleichzeitig.
+- **Konfigurierbare Qualität**: Bitrate (128-320 kbps), Abtastrate (Original, 44.1k, 48k, 96k Hz).
+- **Echtzeit-Fortschritt**: Live-Fortschrittsanzeige mit Prozent-Angabe und detailliertem Protokoll.
+- **Codec-Verwaltung**: Optional installierbar/löschbar (~50 MB), keine permanente Abhängigkeit.
 
 ### 4. 📊 Technische Audio-Analyse & Inspektion (src/Audio/AudioAnalyzer.cs)
 - 100% plattformunabhängige C#-PCM-Inspektions-Engine.

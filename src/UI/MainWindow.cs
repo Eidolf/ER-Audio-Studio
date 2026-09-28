@@ -74,9 +74,12 @@ namespace ErAudioTool.UI
         // Tab Controls
         private Button _btnTabRecord;
         private Button _btnTabMidi;
+        private Button _btnTabConvert;
         private UIElement _recordTabContent;
         private UIElement _midiTabContent;
+        private UIElement _converterTabContent;
         private AudioPreAnalysis _lastPreAnalysis;
+        private AudioConverterTab _converterTab;
 
         private string _outputDirectory;
         private DispatcherTimer _uiTimer;
@@ -221,6 +224,12 @@ namespace ErAudioTool.UI
             _btnTabRecord = CreateStyledButton("🎙 Aufnahme", Color.FromRgb(37, 99, 235), Color.FromRgb(29, 78, 216), 34);
             _btnTabRecord.Click += (s, e) => SwitchToRecordTab();
             tabsStack.Children.Add(_btnTabRecord);
+
+            _btnTabConvert = CreateStyledButton("🔄 Konverter", Color.FromRgb(34, 197, 94), Color.FromRgb(22, 163, 74), 34);
+            _btnTabConvert.Margin = new Thickness(8, 0, 0, 0);
+            _btnTabConvert.Opacity = 0.6;
+            _btnTabConvert.Click += (s, e) => SwitchToConverterTab();
+            tabsStack.Children.Add(_btnTabConvert);
 
             _btnTabMidi = CreateStyledButton("🎹 Audio zu MIDI", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 34);
             _btnTabMidi.Margin = new Thickness(8, 0, 0, 0);
@@ -796,6 +805,12 @@ namespace ErAudioTool.UI
 
             midiScrollViewer.Content = midiStack;
 
+            // --- TAB 3: AUDIO CONVERTER CONTENT ---
+            _converterTab = new AudioConverterTab(this);
+            _converterTabContent = _converterTab.BuildUI();
+            _converterTabContent.Visibility = Visibility.Collapsed;
+            mainContentGrid.Children.Add(_converterTabContent);
+
             // --- FOOTER ---
             var footerBorder = new Border
             {
@@ -1227,8 +1242,10 @@ namespace ErAudioTool.UI
             if (_midiTabContent != null)
             {
                 _recordTabContent.Visibility = Visibility.Collapsed;
+                _converterTabContent.Visibility = Visibility.Collapsed;
                 _midiTabContent.Visibility = Visibility.Visible;
                 _btnTabRecord.Opacity = 0.6;
+                _btnTabConvert.Opacity = 0.6;
                 _btnTabMidi.Opacity = 1.0;
 
                 if (!string.IsNullOrEmpty(filePath))
@@ -1247,9 +1264,24 @@ namespace ErAudioTool.UI
             if (_recordTabContent != null)
             {
                 _midiTabContent.Visibility = Visibility.Collapsed;
+                _converterTabContent.Visibility = Visibility.Collapsed;
                 _recordTabContent.Visibility = Visibility.Visible;
                 _btnTabMidi.Opacity = 0.6;
+                _btnTabConvert.Opacity = 0.6;
                 _btnTabRecord.Opacity = 1.0;
+            }
+        }
+
+        private void SwitchToConverterTab()
+        {
+            if (_converterTabContent != null)
+            {
+                _recordTabContent.Visibility = Visibility.Collapsed;
+                _midiTabContent.Visibility = Visibility.Collapsed;
+                _converterTabContent.Visibility = Visibility.Visible;
+                _btnTabRecord.Opacity = 0.6;
+                _btnTabMidi.Opacity = 0.6;
+                _btnTabConvert.Opacity = 1.0;
             }
         }
 
