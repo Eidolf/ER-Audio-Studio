@@ -536,7 +536,7 @@ namespace ErAudioTool.Audio
 
         public static string FindExternalMidiCli()
         {
-            string[] toolNames = { "basic-pitch", "basic-pitch.exe", "aubionotes", "aubionotes.exe" };
+            string[] toolNames = { "basic-pitch.bat", "basic-pitch.exe", "basic-pitch", "python_env\\Scripts\\basic-pitch.exe", "aubionotes.exe", "aubionotes" };
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string codecDir = Path.Combine(baseDir, "codecs");
 

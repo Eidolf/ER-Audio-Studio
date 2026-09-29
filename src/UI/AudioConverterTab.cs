@@ -695,12 +695,34 @@ namespace ErAudioTool.UI
             btnInstallBasicPitch.ToolTip = "Installiert Spotifys Basic-Pitch KI-Engine automatisch via pip";
             btnInstallBasicPitch.Click += (s, e) =>
             {
-                var psi = new System.Diagnostics.ProcessStartInfo
+                try
                 {
-                    FileName = "cmd.exe",
-                    Arguments = "/k title Basic-Pitch KI Installation && echo ======================================== && echo Installiere Spotifys Basic-Pitch KI-Engine... && echo ======================================== && pip install basic-pitch && echo. && echo Installation abgeschlossen! Sie koennen dieses Fenster schliessen. && echo Das Studio erkennt basic-pitch jetzt automatisch."
-                };
-                try { System.Diagnostics.Process.Start(psi); } catch (Exception ex) { MessageBox.Show(_codecWindow ?? _parentWindow, "Fehler: " + ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error); }
+                    string script = Path.Combine(CodecManager.GetCodecDirectory(), "setup_basic_pitch.bat");
+                    if (!File.Exists(script))
+                    {
+                        script = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "tools", "setup_basic_pitch.bat");
+                    }
+                    if (File.Exists(script))
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = Path.GetFullPath(script),
+                            UseShellExecute = true
+                        });
+                    }
+                    else
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = "cmd.exe",
+                            Arguments = "/k title Basic-Pitch Setup && pip install basic-pitch"
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(_codecWindow ?? _parentWindow, "Fehler beim Starten des Installers: " + ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             };
             btnAiPanel.Children.Add(btnInstallBasicPitch);
 
