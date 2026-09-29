@@ -271,9 +271,9 @@ namespace ErAudioTool.UI
             _deviceComboBox = new ComboBox
             {
                 Height = 36,
-                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Background = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
                 Foreground = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
                 FontSize = 13,
                 VerticalContentAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 10, 0)
@@ -466,9 +466,9 @@ namespace ErAudioTool.UI
             _formatComboBox = new ComboBox
             {
                 Height = 32,
-                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Background = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
                 Foreground = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
                 FontSize = 12,
                 VerticalContentAlignment = VerticalAlignment.Center
             };

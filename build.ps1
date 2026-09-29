@@ -42,6 +42,7 @@ $srcFiles = @(
     (Join-Path $PSScriptRoot "src\Audio\AudioConverterService.cs"),
     (Join-Path $PSScriptRoot "src\Audio\CodecManager.cs"),
     (Join-Path $PSScriptRoot "src\Audio\MidiWriter.cs"),
+    (Join-Path $PSScriptRoot "src\Audio\MidiSynthesizer.cs"),
     (Join-Path $PSScriptRoot "src\Audio\AudioToMidiConverter.cs"),
     (Join-Path $PSScriptRoot "src\UI\Localization.cs"),
     (Join-Path $PSScriptRoot "src\UI\VuMeterControl.cs"),

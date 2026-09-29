@@ -228,9 +228,9 @@ namespace ErAudioTool.UI
             _formatComboBox = new ComboBox
             {
                 Height = 36,
-                Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                Background = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
                 Foreground = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
                 FontSize = 13,
                 VerticalContentAlignment = VerticalAlignment.Center,
                 Padding = new Thickness(8, 4, 8, 4)
@@ -260,9 +260,9 @@ namespace ErAudioTool.UI
             _bitrateComboBox = new ComboBox
             {
                 Height = 36,
-                Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                Background = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
                 Foreground = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
                 FontSize = 13,
                 VerticalContentAlignment = VerticalAlignment.Center,
                 Padding = new Thickness(8, 4, 8, 4)
@@ -290,9 +290,9 @@ namespace ErAudioTool.UI
             _sampleRateComboBox = new ComboBox
             {
                 Height = 36,
-                Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                Background = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
                 Foreground = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
                 FontSize = 13,
                 VerticalContentAlignment = VerticalAlignment.Center,
                 Padding = new Thickness(8, 4, 8, 4)
@@ -725,15 +725,164 @@ namespace ErAudioTool.UI
             string ext = Path.GetExtension(inputFile).ToLowerInvariant();
             if (ext == ".mid" || ext == ".midi")
             {
-                MessageBox.Show(_parentWindow,
-                    "MIDI-Dateien können nicht direkt in Audio konvertiert werden.\n\n" +
-                    "MIDI ist ein Notenformat, kein Audioformat. Um MIDI abzuspielen oder zu konvertieren:\n" +
-                    "1. Nutzen Sie einen Software-Synthesizer (z.B. VirtualMIDISynth, FluidSynth)\n" +
-                    "2. Oder importieren Sie die MIDI-Datei in eine DAW (Digital Audio Workstation)\n" +
-                    "3. Rendern Sie dann das Audio und konvertieren Sie die WAV/MP3-Ausgabe",
-                    "MIDI zu Audio nicht unterstützt",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                // MIDI to Audio conversion with built-in synthesizer
+                var result = MessageBox.Show(_parentWindow,
+                    "MIDI-Datei erkannt!\n\n" +
+                    "MIDI wird mit dem integrierten Synthesizer in WAV konvertiert,\n" +
+                    "dann in das gewählte Format umgewandelt.\n\n" +
+                    "Hinweis: Verwendet einfache Sinuswellen-Synthese.\n" +
+                    "Für bessere Qualität verwenden Sie eine DAW mit hochwertigen Samples.\n\n" +
+                    "Fortfahren?",
+                    "MIDI zu Audio Konvertierung",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (result != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+
+                // Start MIDI conversion in background
+                _isConverting = true;
+                _btnConvert.IsEnabled = false;
+                _btnBrowseInput.IsEnabled = false;
+                _btnBrowseOutput.IsEnabled = false;
+                _formatComboBox.IsEnabled = false;
+                _bitrateComboBox.IsEnabled = false;
+                _sampleRateComboBox.IsEnabled = false;
+                _progressBar.Value = 0;
+                _logTextBox.Clear();
+
+                AudioFormat format = (AudioFormat)_formatComboBox.SelectedIndex;
+                int bitrate = GetSelectedBitrate();
+                int sampleRate = GetSelectedSampleRate();
+
+                System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    // Step 1: MIDI to WAV
+                    string tempWav = Path.Combine(Path.GetTempPath(), "midi_synth_temp_" + Guid.NewGuid().ToString() + ".wav");
+
+                    _parentWindow.Dispatcher.InvokeAsync(() =>
+                    {
+                        _logTextBox.AppendText(string.Format("[{0}] Schritt 1/2: MIDI zu WAV Synthese...\n", DateTime.Now.ToString("HH:mm:ss")));
+                        _progressBar.Value = 10;
+                    });
+
+                    bool synthSuccess = MidiSynthesizer.ConvertMidiToWav(inputFile, tempWav, msg =>
+                    {
+                        _parentWindow.Dispatcher.InvokeAsync(() =>
+                        {
+                            _logTextBox.AppendText(string.Format("[{0}] {1}\n", DateTime.Now.ToString("HH:mm:ss"), msg));
+                            _logTextBox.ScrollToEnd();
+                        });
+                    });
+
+                    if (!synthSuccess)
+                    {
+                        _parentWindow.Dispatcher.InvokeAsync(() =>
+                        {
+                            _isConverting = false;
+                            _btnConvert.IsEnabled = true;
+                            _btnBrowseInput.IsEnabled = true;
+                            _btnBrowseOutput.IsEnabled = true;
+                            _formatComboBox.IsEnabled = true;
+                            _bitrateComboBox.IsEnabled = true;
+                            _sampleRateComboBox.IsEnabled = true;
+                            _logTextBox.AppendText(string.Format("[{0}] ✗ MIDI-Synthese fehlgeschlagen.\n", DateTime.Now.ToString("HH:mm:ss")));
+                        });
+                        return;
+                    }
+
+                    _parentWindow.Dispatcher.InvokeAsync(() =>
+                    {
+                        _progressBar.Value = 50;
+                    });
+
+                    // Step 2: WAV to target format (if not WAV)
+                    bool finalSuccess = true;
+                    if (format != AudioFormat.WAV)
+                    {
+                        _parentWindow.Dispatcher.InvokeAsync(() =>
+                        {
+                            _logTextBox.AppendText(string.Format("[{0}] Schritt 2/2: WAV zu {1} Konvertierung...\n",
+                                DateTime.Now.ToString("HH:mm:ss"), format.ToString()));
+                        });
+
+                        finalSuccess = AudioConverterService.ConvertAudioAdvanced(
+                            tempWav,
+                            outputFile,
+                            format,
+                            bitrate,
+                            sampleRate,
+                            msg =>
+                            {
+                                _parentWindow.Dispatcher.InvokeAsync(() =>
+                                {
+                                    _logTextBox.AppendText(string.Format("[{0}] {1}\n", DateTime.Now.ToString("HH:mm:ss"), msg));
+                                    _logTextBox.ScrollToEnd();
+                                });
+                            },
+                            progress =>
+                            {
+                                _parentWindow.Dispatcher.InvokeAsync(() =>
+                                {
+                                    _progressBar.Value = 50 + (progress / 2);
+                                });
+                            }
+                        );
+                    }
+                    else
+                    {
+                        // Just copy WAV to output
+                        try
+                        {
+                            File.Copy(tempWav, outputFile, true);
+                        }
+                        catch (Exception ex)
+                        {
+                            _parentWindow.Dispatcher.InvokeAsync(() =>
+                            {
+                                _logTextBox.AppendText(string.Format("[{0}] Fehler beim Kopieren: {1}\n", DateTime.Now.ToString("HH:mm:ss"), ex.Message));
+                            });
+                            finalSuccess = false;
+                        }
+                    }
+
+                    // Cleanup temp file
+                    try { if (File.Exists(tempWav)) File.Delete(tempWav); } catch { }
+
+                    _parentWindow.Dispatcher.InvokeAsync(() =>
+                    {
+                        _isConverting = false;
+                        _btnConvert.IsEnabled = true;
+                        _btnBrowseInput.IsEnabled = true;
+                        _btnBrowseOutput.IsEnabled = true;
+                        _formatComboBox.IsEnabled = true;
+                        _bitrateComboBox.IsEnabled = true;
+                        _sampleRateComboBox.IsEnabled = true;
+                        _progressBar.Value = 100;
+
+                        if (finalSuccess)
+                        {
+                            _logTextBox.AppendText(string.Format("[{0}] ✓ MIDI-Konvertierung erfolgreich abgeschlossen!\n", DateTime.Now.ToString("HH:mm:ss")));
+                            var msgResult = MessageBox.Show(_parentWindow,
+                                "MIDI-Konvertierung erfolgreich abgeschlossen!\n\nMöchten Sie die Datei im Explorer öffnen?",
+                                "Erfolg",
+                                MessageBoxButton.YesNo,
+                                MessageBoxImage.Information);
+
+                            if (msgResult == MessageBoxResult.Yes)
+                            {
+                                System.Diagnostics.Process.Start("explorer.exe", "/select, \"" + outputFile + "\"");
+                            }
+                        }
+                        else
+                        {
+                            _logTextBox.AppendText(string.Format("[{0}] ✗ Konvertierung fehlgeschlagen.\n", DateTime.Now.ToString("HH:mm:ss")));
+                        }
+                    });
+                });
+
                 return;
             }
 
