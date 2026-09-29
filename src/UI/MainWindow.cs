@@ -782,7 +782,7 @@ namespace ErAudioTool.UI
             _midiCliStatusText = new TextBlock { Text = "", FontSize = 11, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
             cliLeftStack.Children.Add(_midiCliStatusText);
             cliRowGrid.Children.Add(cliLeftStack);
-            _btnMidiDownloadCli = CreateStyledButton("ðŸ“¥ KI / Codecs verwalten", Color.FromRgb(59, 130, 246), Color.FromRgb(37, 99, 235), 26);
+            _btnMidiDownloadCli = CreateStyledButton("📥 KI / Codecs verwalten", Color.FromRgb(59, 130, 246), Color.FromRgb(37, 99, 235), 26);
             _btnMidiDownloadCli.FontSize = 11;
             _btnMidiDownloadCli.Padding = new Thickness(10, 0, 10, 0);
             _btnMidiDownloadCli.Click += (s, e) => { if (_converterTab != null) { _converterTab.ShowCodecManagementWindow(); UpdateMidiCliStatusBadge(); } };
@@ -1438,15 +1438,15 @@ namespace ErAudioTool.UI
             string cli = AudioToMidiConverter.FindExternalMidiCli();
             if (!string.IsNullOrEmpty(cli))
             {
-                _midiCliStatusText.Text = "âœ“ Aktiv: " + Path.GetFileName(cli);
+                _midiCliStatusText.Text = "✓ Aktiv: " + Path.GetFileName(cli);
                 _midiCliStatusText.Foreground = new SolidColorBrush(Color.FromRgb(34, 197, 94));
-                if (_btnMidiDownloadCli != null) _btnMidiDownloadCli.Content = "âš™ï¸ Downloads & Codecs";
+                if (_btnMidiDownloadCli != null) _btnMidiDownloadCli.Content = "⚙️ Downloads & Codecs";
             }
             else
             {
-                _midiCliStatusText.Text = "â„¹ Standard (YIN aktiv)";
+                _midiCliStatusText.Text = "ℹ Standard (YIN aktiv)";
                 _midiCliStatusText.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
-                if (_btnMidiDownloadCli != null) _btnMidiDownloadCli.Content = "ðŸ“¥ KI / Codecs verwalten";
+                if (_btnMidiDownloadCli != null) _btnMidiDownloadCli.Content = "📥 KI / Codecs verwalten";
             }
         }
 

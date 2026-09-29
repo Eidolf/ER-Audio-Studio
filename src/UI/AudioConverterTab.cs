@@ -675,12 +675,12 @@ namespace ErAudioTool.UI
 
             var aiInfo = new StackPanel();
             var aiTitle = new TextBlock { Text = "4. KI Polyphonie-Erkennung (Basic-Pitch / Aubio)", FontSize = 13, FontWeight = FontWeights.Bold, Foreground = Brushes.White };
-            var aiDesc = new TextBlock { Text = "Neuronales Netzwerk fÃ¼r komplexe mehrstimmige Melodien (ohne CLI: nativer YIN-Algorithmus)", FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), Margin = new Thickness(0, 2, 0, 0) };
+            var aiDesc = new TextBlock { Text = "Neuronales Netzwerk für komplexe mehrstimmige Melodien (ohne CLI: nativer YIN-Algorithmus)", FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), Margin = new Thickness(0, 2, 0, 0) };
             
             string currentCli = AudioToMidiConverter.FindExternalMidiCli();
             var aiStatus = new TextBlock
             {
-                Text = "Status: " + (!string.IsNullOrEmpty(currentCli) ? "âœ“ Aktiv (" + Path.GetFileName(currentCli) + ")" : "â„¹ Integrierter YIN-Algorithmus aktiv (Standard)"),
+                Text = "Status: " + (!string.IsNullOrEmpty(currentCli) ? "✓ Aktiv (" + Path.GetFileName(currentCli) + ")" : "ℹ Integrierter YIN-Algorithmus aktiv (Standard)"),
                 FontSize = 11,
                 Foreground = !string.IsNullOrEmpty(currentCli) ? new SolidColorBrush(Color.FromRgb(34, 197, 94)) : new SolidColorBrush(Color.FromRgb(148, 163, 184)),
                 Margin = new Thickness(0, 4, 0, 0)
@@ -690,8 +690,8 @@ namespace ErAudioTool.UI
             aiInfo.Children.Add(aiStatus);
             aiGrid.Children.Add(aiInfo);
 
-            var btnOpenCodecsFolder = CreateStyledButton("ðŸ“ codecs-Ordner", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
-            btnOpenCodecsFolder.ToolTip = "Ã–ffnet den codecs-Ordner fÃ¼r manuelle CLI-Dateien oder Erweiterungen";
+            var btnOpenCodecsFolder = CreateStyledButton("📁 codecs-Ordner", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
+            btnOpenCodecsFolder.ToolTip = "Öffnet den codecs-Ordner für manuelle CLI-Dateien oder Erweiterungen";
             btnOpenCodecsFolder.Click += (s, e) =>
             {
                 try
