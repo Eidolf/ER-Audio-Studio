@@ -555,8 +555,39 @@ namespace ErAudioTool.Audio
             try
             {
                 string outDir = Path.GetDirectoryName(outputMidi);
-                var psi = new ProcessStartInfo { FileName = toolExe, Arguments = string.Format("\"{0}\" \"{1}\"", outDir, inputAudio), UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
-                using (var p = Process.Start(psi)) { p.WaitForExit(); return p.ExitCode == 0; }
+                if (string.IsNullOrEmpty(outDir)) outDir = Directory.GetCurrentDirectory();
+                var psi = new ProcessStartInfo
+                {
+                    FileName = toolExe,
+                    Arguments = string.Format("\"{0}\" \"{1}\"", outDir, inputAudio),
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+                using (var p = new Process())
+                {
+                    p.StartInfo = psi;
+                    p.OutputDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data) && onLog != null) onLog("  [BasicPitch] " + e.Data); };
+                    p.ErrorDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data) && onLog != null) onLog("  [BasicPitch] " + e.Data); };
+                    p.Start();
+                    p.BeginOutputReadLine();
+                    p.BeginErrorReadLine();
+                    p.WaitForExit();
+                    if (p.ExitCode != 0) return false;
+                }
+                string inBase = Path.GetFileNameWithoutExtension(inputAudio);
+                string expectedBasicPitchMidi = Path.Combine(outDir, inBase + "_basic_pitch.mid");
+                if (File.Exists(expectedBasicPitchMidi))
+                {
+                    if (string.Compare(Path.GetFullPath(expectedBasicPitchMidi), Path.GetFullPath(outputMidi), StringComparison.OrdinalIgnoreCase) != 0)
+                    {
+                        if (File.Exists(outputMidi)) File.Delete(outputMidi);
+                        File.Move(expectedBasicPitchMidi, outputMidi);
+                    }
+                    return true;
+                }
+                return File.Exists(outputMidi);
             }
             catch (Exception ex) { if (onLog != null) onLog("[Warnung] Externes Tool Fehler: " + ex.Message); return false; }
         }
