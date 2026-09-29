@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows;
@@ -1543,6 +1543,7 @@ namespace ErAudioTool.UI
             var triggerDisabled = new Trigger { Property = Button.IsEnabledProperty, Value = false };
             triggerDisabled.Setters.Add(new Setter(Border.OpacityProperty, 0.4, "border"));
             template.Triggers.Add(triggerDisabled);
+            template.VisualTree = factory;
 
             btn.Template = template;
             return btn;
