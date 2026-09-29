@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -2145,13 +2146,15 @@ namespace ErAudioTool.UI
             {
                 foreach (var child in effectsStack.Children)
                 {
-                    if (child is Grid grid && grid.Margin.Left == 20)
+                    Grid grid = child as Grid;
+                    if (grid != null && grid.Margin.Left == 20)
                     {
                         // This is the compressor ratio header
                         bool foundRatio = false;
                         foreach (var gridChild in grid.Children)
                         {
-                            if (gridChild is TextBlock tb && tb.Text == "Kompressions-Verhältnis:")
+                            TextBlock tb = gridChild as TextBlock;
+                            if (tb != null && tb.Text == "Kompressions-Verhältnis:")
                             {
                                 foundRatio = true;
                                 break;
@@ -2162,9 +2165,13 @@ namespace ErAudioTool.UI
                             grid.Visibility = isChecked ? Visibility.Visible : Visibility.Collapsed;
                         }
                     }
-                    else if (child is Slider slider && slider.Margin.Left == 20 && slider == _arrangeCompressRatioSlider)
+                    else
                     {
-                        slider.Visibility = isChecked ? Visibility.Visible : Visibility.Collapsed;
+                        Slider slider = child as Slider;
+                        if (slider != null && slider.Margin.Left == 20 && slider == _arrangeCompressRatioSlider)
+                        {
+                            slider.Visibility = isChecked ? Visibility.Visible : Visibility.Collapsed;
+                        }
                     }
                 }
             }
@@ -2181,13 +2188,15 @@ namespace ErAudioTool.UI
             {
                 foreach (var child in effectsStack.Children)
                 {
-                    if (child is Grid grid && grid.Margin.Left == 20)
+                    Grid grid = child as Grid;
+                    if (grid != null && grid.Margin.Left == 20)
                     {
                         // This is the reverb amount header
                         bool foundReverb = false;
                         foreach (var gridChild in grid.Children)
                         {
-                            if (gridChild is TextBlock tb && tb.Text == "Hall-Intensität:")
+                            TextBlock tb = gridChild as TextBlock;
+                            if (tb != null && tb.Text == "Hall-Intensität:")
                             {
                                 foundReverb = true;
                                 break;
@@ -2198,9 +2207,13 @@ namespace ErAudioTool.UI
                             grid.Visibility = isChecked ? Visibility.Visible : Visibility.Collapsed;
                         }
                     }
-                    else if (child is Slider slider && slider.Margin.Left == 20 && slider == _arrangeReverbAmountSlider)
+                    else
                     {
-                        slider.Visibility = isChecked ? Visibility.Visible : Visibility.Collapsed;
+                        Slider slider = child as Slider;
+                        if (slider != null && slider.Margin.Left == 20 && slider == _arrangeReverbAmountSlider)
+                        {
+                            slider.Visibility = isChecked ? Visibility.Visible : Visibility.Collapsed;
+                        }
                     }
                 }
             }
@@ -2231,15 +2244,15 @@ namespace ErAudioTool.UI
             _arrangeLogTextBox.AppendText(string.Format("Ausgabe: {0}\n\n", outFile));
 
             // Collect settings
-            double bassGain = _eqBassSlider?.Value ?? 0.0;
-            double midGain = _eqMidSlider?.Value ?? 0.0;
-            double trebleGain = _eqTrebleSlider?.Value ?? 0.0;
-            double masterVolume = _masterVolumeSlider?.Value ?? 0.0;
-            bool normalize = _arrangeNormalizeCheckBox?.IsChecked == true;
-            bool compress = _arrangeCompressCheckBox?.IsChecked == true;
-            double compressRatio = _arrangeCompressRatioSlider?.Value ?? 4.0;
-            bool reverb = _arrangeReverbCheckBox?.IsChecked == true;
-            double reverbAmount = _arrangeReverbAmountSlider?.Value ?? 30.0;
+            double bassGain = _eqBassSlider != null ? _eqBassSlider.Value : 0.0;
+            double midGain = _eqMidSlider != null ? _eqMidSlider.Value : 0.0;
+            double trebleGain = _eqTrebleSlider != null ? _eqTrebleSlider.Value : 0.0;
+            double masterVolume = _masterVolumeSlider != null ? _masterVolumeSlider.Value : 0.0;
+            bool normalize = _arrangeNormalizeCheckBox != null && _arrangeNormalizeCheckBox.IsChecked == true;
+            bool compress = _arrangeCompressCheckBox != null && _arrangeCompressCheckBox.IsChecked == true;
+            double compressRatio = _arrangeCompressRatioSlider != null ? _arrangeCompressRatioSlider.Value : 4.0;
+            bool reverb = _arrangeReverbCheckBox != null && _arrangeReverbCheckBox.IsChecked == true;
+            double reverbAmount = _arrangeReverbAmountSlider != null ? _arrangeReverbAmountSlider.Value : 30.0;
 
             _arrangeLogTextBox.AppendText("=== Einstellungen ===\n");
             _arrangeLogTextBox.AppendText(string.Format("Bass: {0:+0;-0;0} dB, Mitten: {1:+0;-0;0} dB, Höhen: {2:+0;-0;0} dB\n", bassGain, midGain, trebleGain));

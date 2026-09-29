@@ -29,7 +29,7 @@ namespace ErAudioTool.Audio
         {
             try
             {
-                logCallback?.Invoke("Lade Audiodatei...");
+                if (logCallback != null) logCallback("Lade Audiodatei...");
 
                 // Read input audio file
                 float[][] audioData;
@@ -41,51 +41,51 @@ namespace ErAudioTool.Audio
                     return new AudioArrangeResult { Success = false, ErrorMessage = "Fehler beim Laden der Audiodatei" };
                 }
 
-                logCallback?.Invoke(string.Format("Geladen: {0} Hz, {1} Kanäle, {2:0.1} Sekunden", sampleRate, channels, audioData[0].Length / (double)sampleRate));
+                if (logCallback != null) logCallback(string.Format("Geladen: {0} Hz, {1} Kanäle, {2:0.1} Sekunden", sampleRate, channels, audioData[0].Length / (double)sampleRate));
 
                 // Apply EQ
                 if (Math.Abs(options.BassGainDb) > 0.01 || Math.Abs(options.MidGainDb) > 0.01 || Math.Abs(options.TrebleGainDb) > 0.01)
                 {
-                    logCallback?.Invoke("Wende 3-Band-Equalizer an...");
+                    if (logCallback != null) logCallback("Wende 3-Band-Equalizer an...");
                     ApplyEqualizer(audioData, sampleRate, options.BassGainDb, options.MidGainDb, options.TrebleGainDb);
                 }
 
                 // Apply compression
                 if (options.Compress)
                 {
-                    logCallback?.Invoke(string.Format("Wende Kompressor an (Ratio: {0:0.0}:1)...", options.CompressionRatio));
+                    if (logCallback != null) logCallback(string.Format("Wende Kompressor an (Ratio: {0:0.0}:1)...", options.CompressionRatio));
                     ApplyCompression(audioData, options.CompressionRatio);
                 }
 
                 // Apply reverb
                 if (options.Reverb)
                 {
-                    logCallback?.Invoke(string.Format("Wende Hall-Effekt an ({0:0}%)...", options.ReverbAmount * 100));
+                    if (logCallback != null) logCallback(string.Format("Wende Hall-Effekt an ({0:0}%)...", options.ReverbAmount * 100));
                     ApplyReverb(audioData, sampleRate, options.ReverbAmount);
                 }
 
                 // Apply master volume
                 if (Math.Abs(options.MasterVolumeDb) > 0.01)
                 {
-                    logCallback?.Invoke(string.Format("Wende Master-Lautstärke an ({0:+0.0;-0.0;0} dB)...", options.MasterVolumeDb));
+                    if (logCallback != null) logCallback(string.Format("Wende Master-Lautstärke an ({0:+0.0;-0.0;0} dB)...", options.MasterVolumeDb));
                     ApplyGain(audioData, options.MasterVolumeDb);
                 }
 
                 // Normalize
                 if (options.Normalize)
                 {
-                    logCallback?.Invoke("Normalisiere Audio...");
+                    if (logCallback != null) logCallback("Normalisiere Audio...");
                     NormalizeAudio(audioData);
                 }
 
                 // Write output file
-                logCallback?.Invoke("Schreibe Ausgabedatei...");
+                if (logCallback != null) logCallback("Schreibe Ausgabedatei...");
                 if (!WriteAudioFile(outputPath, audioData, sampleRate, channels, logCallback))
                 {
                     return new AudioArrangeResult { Success = false, ErrorMessage = "Fehler beim Schreiben der Ausgabedatei" };
                 }
 
-                logCallback?.Invoke("Fertig!");
+                if (logCallback != null) logCallback("Fertig!");
 
                 return new AudioArrangeResult { Success = true };
             }
@@ -112,10 +112,10 @@ namespace ErAudioTool.Audio
                 else
                 {
                     // For non-WAV files, use FFmpeg if available
-                    logCallback?.Invoke("Konvertiere zu WAV mit FFmpeg...");
+                    if (logCallback != null) logCallback("Konvertiere zu WAV mit FFmpeg...");
                     string tempWav = Path.GetTempFileName() + ".wav";
 
-                    if (AudioConverterService.ConvertWithFfmpeg(path, tempWav, "wav", 0, logCallback))
+                    if (AudioConverterService.ConvertAudio(path, tempWav, "wav", 0, logCallback))
                     {
                         bool result = ReadWavFile(tempWav, out audioData, out sampleRate, out channels);
                         try { File.Delete(tempWav); } catch { }
@@ -259,7 +259,7 @@ namespace ErAudioTool.Audio
                     }
 
                     string format = ext.TrimStart('.');
-                    bool success = AudioConverterService.ConvertWithFfmpeg(tempWav, path, format, 0, logCallback);
+                    bool success = AudioConverterService.ConvertAudio(tempWav, path, format, 0, logCallback);
 
                     try { File.Delete(tempWav); } catch { }
 
