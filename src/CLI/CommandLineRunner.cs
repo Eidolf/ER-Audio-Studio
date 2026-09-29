@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using ErAudioTool.Audio;
 
@@ -74,15 +75,17 @@ namespace ErAudioTool.CLI
 
         private static void PrintHelp()
         {
+            var ver = Assembly.GetExecutingAssembly().GetName().Version;
+            string verStr = ver != null ? string.Format("v{0}.{1}.{2}", ver.Major, ver.Minor, ver.Build) : "v0.1.0";
             Console.WriteLine();
             Console.WriteLine("===============================================================================");
-            Console.WriteLine("  ER AUDIO LOOPBACK RECORDER (CLI)");
-            Console.WriteLine("  Natives Windows WASAPI Loopback Audio Capture Tool");
+            Console.WriteLine("  ER AUDIO STUDIO (CLI) " + verStr);
+            Console.WriteLine("  Natives Windows WASAPI Audio Capture & Studio Tool");
             Console.WriteLine("===============================================================================");
             Console.WriteLine();
             Console.WriteLine("VERWENDUNG:");
-            Console.WriteLine("  ErAudioTool.exe [Befehle] [Optionen]");
-            Console.WriteLine("  (Ohne Argumente gestartet, öffnet sich die grafische Benutzeroberfläche)");
+            Console.WriteLine("  ErAudioCli.exe [Befehle] [Optionen]");
+            Console.WriteLine("  (ErAudioStudio.exe startet die grafische Benutzeroberfläche)");
             Console.WriteLine();
             Console.WriteLine("BEFEHLE:");
             Console.WriteLine("  -r, --record              Startet eine Audioaufnahme über Loopback");
@@ -110,13 +113,13 @@ namespace ErAudioTool.CLI
             Console.WriteLine();
             Console.WriteLine("BEISPIELE:");
             Console.WriteLine("  # Alle Wiedergabegeräte anzeigen");
-            Console.WriteLine("  ErAudioTool.exe --list-devices");
+            Console.WriteLine("  ErAudioCli.exe --list-devices");
             Console.WriteLine();
             Console.WriteLine("  # 10 Sekunden vom Standard-Audiogerät aufnehmen:");
-            Console.WriteLine("  ErAudioTool.exe --record --duration 10");
+            Console.WriteLine("  ErAudioCli.exe --record --duration 10");
             Console.WriteLine();
             Console.WriteLine("  # Audiodatei in MIDI umwandeln:");
-            Console.WriteLine("  ErAudioTool.exe --midi \"aufnahme.wav\" --out \"melodie.mid\"");
+            Console.WriteLine("  ErAudioCli.exe --midi \"aufnahme.wav\" --out \"melodie.mid\"");
             Console.WriteLine("===============================================================================");
             Console.WriteLine();
         }
@@ -223,7 +226,7 @@ namespace ErAudioTool.CLI
 
             Console.WriteLine();
             Console.WriteLine("===============================================================================");
-            Console.WriteLine("  ER AUDIO LOOPBACK RECORDER - AUFNAHME GESTARTET");
+            Console.WriteLine("  ER AUDIO STUDIO - AUFNAHME GESTARTET");
             Console.WriteLine("===============================================================================");
             Console.WriteLine("  Gerät         : " + targetDevice.Name);
             Console.WriteLine("  Format        : " + (format == WavOutputFormat.Pcm16 ? "16-Bit PCM WAV" : "32-Bit Float WAV") + " (" + targetDevice.SampleRate + " Hz, Stereo)");

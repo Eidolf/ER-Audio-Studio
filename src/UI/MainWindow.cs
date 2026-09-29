@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -167,7 +168,9 @@ namespace ErAudioTool.UI
 
         private void InitializeWindow()
         {
-            Title = "ER Audio Loopback Recorder";
+            var ver = Assembly.GetExecutingAssembly().GetName().Version;
+            string verStr = ver != null ? string.Format("v{0}.{1}.{2}", ver.Major, ver.Minor, ver.Build) : "v0.1.0";
+            Title = string.Format("ER Audio Studio {0}", verStr);
             Width = 1100;
             Height = 900;
             MinWidth = 900;
@@ -237,14 +240,14 @@ namespace ErAudioTool.UI
             var textStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             var titleText = new TextBlock
             {
-                Text = "ER AUDIO LOOPBACK RECORDER",
+                Text = "ER AUDIO STUDIO",
                 FontSize = 17,
                 FontWeight = FontWeights.Bold,
                 Foreground = Brushes.White
             };
             var subText = new TextBlock
             {
-                Text = "System-Audio direkt aufnehmen ohne Qualitätsverlust (WASAPI)",
+                Text = "Professionelle Desktop-Audio-Suite: Aufnahme, Konverter, MIDI & Analyse",
                 FontSize = 11,
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
                 Margin = new Thickness(0, 2, 0, 0)
@@ -1557,9 +1560,11 @@ namespace ErAudioTool.UI
             footerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             footerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
+            var ver = Assembly.GetExecutingAssembly().GetName().Version;
+            string verStr = ver != null ? string.Format("v{0}.{1}.{2}", ver.Major, ver.Minor, ver.Build) : "v0.1.0";
             var footerText = new TextBlock
             {
-                Text = "ER Audio Tool v1.0 • Native WASAPI Loopback • Bereit",
+                Text = string.Format("ER Audio Studio {0} • Native WASAPI & DSP Engine • Bereit", verStr),
                 FontSize = 11,
                 Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139))
             };
@@ -1992,7 +1997,7 @@ namespace ErAudioTool.UI
         {
             using (var dlg = new System.Windows.Forms.FolderBrowserDialog())
             {
-                dlg.Description = "Wählen Sie das Zielverzeichnis für Loopback-Aufnahmen:";
+                dlg.Description = "Wählen Sie das Zielverzeichnis für Studio-Audioaufnahmen:";
                 dlg.SelectedPath = _outputDirectory;
                 if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {

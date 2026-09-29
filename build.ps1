@@ -1,5 +1,5 @@
-# ER Audio Studio - Build Script
 param(
+    [string]$AppVersion = "",
     [switch]$RunGui,
     [switch]$RunCli
 )
@@ -10,14 +10,24 @@ Write-Host "==========================================================" -Foregro
 Write-Host "  ER Audio Studio - Compilation" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-$csc = "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
-$wpf = "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF"
+$cscCandidates = @(
+    "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe",
+    "C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe"
+)
+$csc = $cscCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+$wpfCandidates = @(
+    "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF",
+    "C:\Windows\Microsoft.NET\Framework\v4.0.30319\WPF"
+)
+$wpf = $wpfCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+
 $binDir = Join-Path $PSScriptRoot "bin"
 $guiExe = Join-Path $binDir "ErAudioStudio.exe"
 $cliExe = Join-Path $binDir "ErAudioCli.exe"
 
-if (-not (Test-Path $csc)) {
-    Write-Error "C# Compiler (csc.exe) nicht gefunden unter: $csc"
+if (-not $csc -or -not (Test-Path $csc)) {
+    Write-Error "C# Compiler (csc.exe) nicht gefunden!"
     exit 1
 }
 
@@ -30,8 +40,22 @@ if (-not (Test-Path $recDir)) {
     New-Item -ItemType Directory -Path $recDir -Force | Out-Null
 }
 
+$assemblyInfoPath = Join-Path $PSScriptRoot "src\AssemblyInfo.cs"
+if ($AppVersion -ne "") {
+    $cleanVer = $AppVersion.TrimStart('v').Trim()
+    # Normalize 0.1.0 to 0.1.0.0 for AssemblyVersion
+    $parts = $cleanVer.Split('.')
+    while ($parts.Length -lt 4) { $parts += "0" }
+    $quadVer = ($parts[0..3] -join '.')
+    Write-Host "Setze Version auf: $quadVer (aus Tag/Param '$AppVersion')" -ForegroundColor Cyan
+    $asmContent = Get-Content $assemblyInfoPath -Raw -Encoding UTF8
+    $asmContent = [System.Text.RegularExpressions.Regex]::Replace($asmContent, 'AssemblyVersion\("[^"]+"\)', "AssemblyVersion(`"$quadVer`")")
+    $asmContent = [System.Text.RegularExpressions.Regex]::Replace($asmContent, 'AssemblyFileVersion\("[^"]+"\)', "AssemblyFileVersion(`"$quadVer`")")
+    Set-Content -Path $assemblyInfoPath -Value $asmContent -Encoding UTF8
+}
+
 $srcFiles = @(
-    (Join-Path $PSScriptRoot "src\AssemblyInfo.cs"),
+    $assemblyInfoPath,
     (Join-Path $PSScriptRoot "src\App.cs"),
     (Join-Path $PSScriptRoot "src\Audio\WasapiInterop.cs"),
     (Join-Path $PSScriptRoot "src\Audio\AudioDevice.cs"),

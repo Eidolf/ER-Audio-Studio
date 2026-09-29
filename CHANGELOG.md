@@ -1,6 +1,6 @@
 # Changelog - ER Audio Studio
 
-## [Unreleased] - Audio Converter Feature
+## [0.1.0] - Initial Release
 
 ### ✨ Neue Features
 

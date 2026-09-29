@@ -1,0 +1,88 @@
+name: Build and Release ER Audio Studio
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g. 0.1.0)'
+        required: false
+        default: '0.1.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Version
+        id: get_version
+        shell: pwsh
+        run: |
+          $ver = ""
+          if ($env:GITHUB_REF -like "refs/tags/v*") {
+              $ver = $env:GITHUB_REF.Substring(11) # Strip 'refs/tags/v'
+          } elseif ('${{ github.event.inputs.version }}' -ne '') {
+              $ver = '${{ github.event.inputs.version }}'.TrimStart('v')
+          } else {
+              $ver = "0.1.0"
+          }
+          Write-Host "Resolved Version: $ver"
+          "version=$ver" >> $env:GITHUB_OUTPUT
+
+      - name: Compile ER Audio Studio
+        shell: powershell
+        run: |
+          Write-Host "Building version ${{ steps.get_version.outputs.version }}..."
+          .\build.ps1 -AppVersion "${{ steps.get_version.outputs.version }}"
+
+      - name: Prepare Release Artifacts
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.get_version.outputs.version }}"
+          $releaseDir = "release-package"
+          New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
+          
+          # Copy executables and scripts
+          Copy-Item "bin\ErAudioStudio.exe" -Destination "$releaseDir\ErAudioStudio.exe"
+          Copy-Item "bin\ErAudioCli.exe" -Destination "$releaseDir\ErAudioCli.exe"
+          Copy-Item "Start-Studio.bat" -Destination "$releaseDir\Start-Studio.bat"
+          Copy-Item "README.md" -Destination "$releaseDir\README.md"
+          Copy-Item "CHANGELOG.md" -Destination "$releaseDir\CHANGELOG.md"
+          Copy-Item -Path "assets" -Destination "$releaseDir\assets" -Recurse -Force
+          
+          # Create zip bundle
+          Compress-Archive -Path "$releaseDir\*" -DestinationPath "ER-Audio-Studio-v$ver-windows.zip" -Force
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: ER Audio Studio v${{ steps.get_version.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            bin/ErAudioStudio.exe
+            bin/ErAudioCli.exe
+            ER-Audio-Studio-v${{ steps.get_version.outputs.version }}-windows.zip
+
+      - name: Upload Artifacts (Workflow Dispatch)
+        uses: actions/upload-artifact@v4
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        with:
+          name: ER-Audio-Studio-v${{ steps.get_version.outputs.version }}
+          path: |
+            bin/ErAudioStudio.exe
+            bin/ErAudioCli.exe
+            ER-Audio-Studio-v${{ steps.get_version.outputs.version }}-windows.zip
