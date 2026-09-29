@@ -690,7 +690,22 @@ namespace ErAudioTool.UI
             aiInfo.Children.Add(aiStatus);
             aiGrid.Children.Add(aiInfo);
 
+            var btnAiPanel = new StackPanel { Orientation = Orientation.Horizontal };
+            var btnInstallBasicPitch = CreateStyledButton("📥 Basic-Pitch (pip) laden", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 32);
+            btnInstallBasicPitch.ToolTip = "Installiert Spotifys Basic-Pitch KI-Engine automatisch via pip";
+            btnInstallBasicPitch.Click += (s, e) =>
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = "/k title Basic-Pitch KI Installation && echo ======================================== && echo Installiere Spotifys Basic-Pitch KI-Engine... && echo ======================================== && pip install basic-pitch && echo. && echo Installation abgeschlossen! Sie koennen dieses Fenster schliessen. && echo Das Studio erkennt basic-pitch jetzt automatisch."
+                };
+                try { System.Diagnostics.Process.Start(psi); } catch (Exception ex) { MessageBox.Show(_codecWindow ?? _parentWindow, "Fehler: " + ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error); }
+            };
+            btnAiPanel.Children.Add(btnInstallBasicPitch);
+
             var btnOpenCodecsFolder = CreateStyledButton("📁 codecs-Ordner", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
+            btnOpenCodecsFolder.Margin = new Thickness(8, 0, 0, 0);
             btnOpenCodecsFolder.ToolTip = "Öffnet den codecs-Ordner für manuelle CLI-Dateien oder Erweiterungen";
             btnOpenCodecsFolder.Click += (s, e) =>
             {
@@ -701,8 +716,9 @@ namespace ErAudioTool.UI
                 }
                 catch { }
             };
-            Grid.SetColumn(btnOpenCodecsFolder, 1);
-            aiGrid.Children.Add(btnOpenCodecsFolder);
+            btnAiPanel.Children.Add(btnOpenCodecsFolder);
+            Grid.SetColumn(btnAiPanel, 1);
+            aiGrid.Children.Add(btnAiPanel);
             aiStack.Children.Add(aiGrid);
             aiCard.Child = aiStack;
             mainStack.Children.Add(aiCard);
