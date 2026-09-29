@@ -77,11 +77,34 @@ namespace ErAudioTool.UI
         private Button _btnTabRecord;
         private Button _btnTabMidi;
         private Button _btnTabConvert;
+        private Button _btnTabArrange;
         private UIElement _recordTabContent;
         private UIElement _midiTabContent;
         private UIElement _converterTabContent;
+        private UIElement _arrangeTabContent;
         private AudioPreAnalysis _lastPreAnalysis;
         private AudioConverterTab _converterTab;
+
+        // Arrange & EQ Tab Controls
+        private TextBox _arrangeInputTextBox;
+        private TextBox _arrangeOutputTextBox;
+        private Slider _eqBassSlider;
+        private Slider _eqMidSlider;
+        private Slider _eqTrebleSlider;
+        private Slider _masterVolumeSlider;
+        private TextBlock _eqBassText;
+        private TextBlock _eqMidText;
+        private TextBlock _eqTrebleText;
+        private TextBlock _masterVolumeText;
+        private CheckBox _arrangeNormalizeCheckBox;
+        private CheckBox _arrangeCompressCheckBox;
+        private CheckBox _arrangeReverbCheckBox;
+        private Slider _arrangeCompressRatioSlider;
+        private Slider _arrangeReverbAmountSlider;
+        private TextBlock _arrangeCompressRatioText;
+        private TextBlock _arrangeReverbAmountText;
+        private Button _btnProcessArrange;
+        private TextBox _arrangeLogTextBox;
 
         private string _outputDirectory;
         private DispatcherTimer _uiTimer;
@@ -105,6 +128,7 @@ namespace ErAudioTool.UI
             BuildUi();
             HookEvents();
             LoadAudioDevices();
+            LoadExistingRecordings();
 
             // UI update timer for clock and stats
             _uiTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
@@ -115,10 +139,10 @@ namespace ErAudioTool.UI
         private void InitializeWindow()
         {
             Title = "ER Audio Loopback Recorder";
-            Width = 780;
-            Height = 780;
-            MinWidth = 680;
-            MinHeight = 650;
+            Width = 1100;
+            Height = 900;
+            MinWidth = 900;
+            MinHeight = 750;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)); // #0F172A
 
@@ -238,6 +262,12 @@ namespace ErAudioTool.UI
             _btnTabMidi.Opacity = 0.6;
             _btnTabMidi.Click += (s, e) => SwitchToMidiTab();
             tabsStack.Children.Add(_btnTabMidi);
+
+            _btnTabArrange = CreateStyledButton("🎛 Arrange & EQ", Color.FromRgb(236, 72, 153), Color.FromRgb(219, 39, 119), 34);
+            _btnTabArrange.Margin = new Thickness(8, 0, 0, 0);
+            _btnTabArrange.Opacity = 0.6;
+            _btnTabArrange.Click += (s, e) => SwitchToArrangeTab();
+            tabsStack.Children.Add(_btnTabArrange);
 
             var headerRightStack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             headerRightStack.Children.Add(tabsStack);
@@ -826,6 +856,411 @@ namespace ErAudioTool.UI
             _converterTabContent.Visibility = Visibility.Collapsed;
             mainContentGrid.Children.Add(_converterTabContent);
 
+            // --- TAB 4: ARRANGE & EQ CONTENT (SCROLLABLE) ---
+            var arrangeScrollViewer = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Padding = new Thickness(24, 16, 24, 16),
+                Visibility = Visibility.Collapsed
+            };
+            _arrangeTabContent = arrangeScrollViewer;
+            mainContentGrid.Children.Add(_arrangeTabContent);
+
+            var arrangeStack = new StackPanel();
+
+            // Card 1: File Selection
+            var arrangeFilesStack = new StackPanel();
+
+            var arrangeInLabel = new TextBlock
+            {
+                Text = "Eingangs-Audiodatei (WAV, MP3, FLAC, OGG):",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+            arrangeFilesStack.Children.Add(arrangeInLabel);
+
+            var arrangeInGrid = new Grid();
+            arrangeInGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            arrangeInGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            _arrangeInputTextBox = new TextBox
+            {
+                Height = 32,
+                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Foreground = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                FontSize = 12,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(6, 0, 6, 0),
+                Margin = new Thickness(0, 0, 8, 0)
+            };
+            arrangeInGrid.Children.Add(_arrangeInputTextBox);
+
+            var btnArrangeBrowseIn = CreateStyledButton("📁 Durchsuchen...", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
+            btnArrangeBrowseIn.Click += (s, e) => SelectArrangeInputFile();
+            Grid.SetColumn(btnArrangeBrowseIn, 1);
+            arrangeInGrid.Children.Add(btnArrangeBrowseIn);
+            arrangeFilesStack.Children.Add(arrangeInGrid);
+
+            var arrangeOutLabel = new TextBlock
+            {
+                Text = "Ausgabe-Audiodatei:",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Margin = new Thickness(0, 10, 0, 6)
+            };
+            arrangeFilesStack.Children.Add(arrangeOutLabel);
+
+            var arrangeOutGrid = new Grid();
+            arrangeOutGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            arrangeOutGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            _arrangeOutputTextBox = new TextBox
+            {
+                Height = 32,
+                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Foreground = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                FontSize = 12,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(6, 0, 6, 0),
+                Margin = new Thickness(0, 0, 8, 0)
+            };
+            arrangeOutGrid.Children.Add(_arrangeOutputTextBox);
+
+            var btnArrangeBrowseOut = CreateStyledButton("💾 Speicherort...", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
+            btnArrangeBrowseOut.Click += (s, e) => SelectArrangeOutputFile();
+            Grid.SetColumn(btnArrangeBrowseOut, 1);
+            arrangeOutGrid.Children.Add(btnArrangeBrowseOut);
+            arrangeFilesStack.Children.Add(arrangeOutGrid);
+
+            arrangeStack.Children.Add(CreateCard("DATEI-AUSWAHL", arrangeFilesStack));
+
+            // Card 2: Equalizer Controls
+            var eqStack = new StackPanel();
+
+            var eqDesc = new TextBlock
+            {
+                Text = "Passen Sie die Frequenzbereiche an, um den Klang zu optimieren:",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            eqStack.Children.Add(eqDesc);
+
+            // Bass Slider
+            var bassHeader = new Grid();
+            bassHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            bassHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var bassLabel = new TextBlock
+            {
+                Text = "🔊 Bass (60-250 Hz):",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225))
+            };
+            bassHeader.Children.Add(bassLabel);
+
+            _eqBassText = new TextBlock
+            {
+                Text = "0 dB",
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(236, 72, 153))
+            };
+            Grid.SetColumn(_eqBassText, 1);
+            bassHeader.Children.Add(_eqBassText);
+            eqStack.Children.Add(bassHeader);
+
+            _eqBassSlider = new Slider
+            {
+                Minimum = -12.0,
+                Maximum = 12.0,
+                Value = 0.0,
+                TickFrequency = 1.0,
+                IsSnapToTickEnabled = true,
+                Margin = new Thickness(0, 6, 0, 12)
+            };
+            _eqBassSlider.ValueChanged += (s, e) =>
+            {
+                if (_eqBassText != null) _eqBassText.Text = string.Format("{0:+0;-0;0} dB", _eqBassSlider.Value);
+            };
+            eqStack.Children.Add(_eqBassSlider);
+
+            // Mid Slider
+            var midHeader = new Grid();
+            midHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            midHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var midLabel = new TextBlock
+            {
+                Text = "🎸 Mitten (250 Hz - 4 kHz):",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225))
+            };
+            midHeader.Children.Add(midLabel);
+
+            _eqMidText = new TextBlock
+            {
+                Text = "0 dB",
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(236, 72, 153))
+            };
+            Grid.SetColumn(_eqMidText, 1);
+            midHeader.Children.Add(_eqMidText);
+            eqStack.Children.Add(midHeader);
+
+            _eqMidSlider = new Slider
+            {
+                Minimum = -12.0,
+                Maximum = 12.0,
+                Value = 0.0,
+                TickFrequency = 1.0,
+                IsSnapToTickEnabled = true,
+                Margin = new Thickness(0, 6, 0, 12)
+            };
+            _eqMidSlider.ValueChanged += (s, e) =>
+            {
+                if (_eqMidText != null) _eqMidText.Text = string.Format("{0:+0;-0;0} dB", _eqMidSlider.Value);
+            };
+            eqStack.Children.Add(_eqMidSlider);
+
+            // Treble Slider
+            var trebleHeader = new Grid();
+            trebleHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            trebleHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var trebleLabel = new TextBlock
+            {
+                Text = "✨ Höhen (4 kHz - 16 kHz):",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225))
+            };
+            trebleHeader.Children.Add(trebleLabel);
+
+            _eqTrebleText = new TextBlock
+            {
+                Text = "0 dB",
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(236, 72, 153))
+            };
+            Grid.SetColumn(_eqTrebleText, 1);
+            trebleHeader.Children.Add(_eqTrebleText);
+            eqStack.Children.Add(trebleHeader);
+
+            _eqTrebleSlider = new Slider
+            {
+                Minimum = -12.0,
+                Maximum = 12.0,
+                Value = 0.0,
+                TickFrequency = 1.0,
+                IsSnapToTickEnabled = true,
+                Margin = new Thickness(0, 6, 0, 12)
+            };
+            _eqTrebleSlider.ValueChanged += (s, e) =>
+            {
+                if (_eqTrebleText != null) _eqTrebleText.Text = string.Format("{0:+0;-0;0} dB", _eqTrebleSlider.Value);
+            };
+            eqStack.Children.Add(_eqTrebleSlider);
+
+            // Master Volume
+            var volumeHeader = new Grid();
+            volumeHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            volumeHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var volumeLabel = new TextBlock
+            {
+                Text = "🔉 Master-Lautstärke:",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225))
+            };
+            volumeHeader.Children.Add(volumeLabel);
+
+            _masterVolumeText = new TextBlock
+            {
+                Text = "0 dB",
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248))
+            };
+            Grid.SetColumn(_masterVolumeText, 1);
+            volumeHeader.Children.Add(_masterVolumeText);
+            eqStack.Children.Add(volumeHeader);
+
+            _masterVolumeSlider = new Slider
+            {
+                Minimum = -20.0,
+                Maximum = 12.0,
+                Value = 0.0,
+                TickFrequency = 1.0,
+                IsSnapToTickEnabled = true,
+                Margin = new Thickness(0, 6, 0, 0)
+            };
+            _masterVolumeSlider.ValueChanged += (s, e) =>
+            {
+                if (_masterVolumeText != null) _masterVolumeText.Text = string.Format("{0:+0;-0;0} dB", _masterVolumeSlider.Value);
+            };
+            eqStack.Children.Add(_masterVolumeSlider);
+
+            arrangeStack.Children.Add(CreateCard("3-BAND EQUALIZER", eqStack));
+
+            // Card 3: Professional Effects
+            var effectsStack = new StackPanel();
+
+            var effectsLabel = new TextBlock
+            {
+                Text = "PROFESSIONELLE AUDIO-EFFEKTE:",
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            effectsStack.Children.Add(effectsLabel);
+
+            _arrangeNormalizeCheckBox = new CheckBox
+            {
+                Content = "🎚 Normalisierung (Optimale Lautstärke ohne Clipping)",
+                IsChecked = true,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            effectsStack.Children.Add(_arrangeNormalizeCheckBox);
+
+            _arrangeCompressCheckBox = new CheckBox
+            {
+                Content = "📊 Dynamik-Kompressor (Gleichmäßigere Lautstärke)",
+                IsChecked = false,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            _arrangeCompressCheckBox.Checked += (s, e) => UpdateCompressorVisibility();
+            _arrangeCompressCheckBox.Unchecked += (s, e) => UpdateCompressorVisibility();
+            effectsStack.Children.Add(_arrangeCompressCheckBox);
+
+            // Compressor Ratio (initially hidden)
+            var compressRatioHeader = new Grid { Margin = new Thickness(20, 0, 0, 8), Visibility = Visibility.Collapsed };
+            compressRatioHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            compressRatioHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var compressRatioLabel = new TextBlock
+            {
+                Text = "Kompressions-Verhältnis:",
+                FontSize = 11,
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184))
+            };
+            compressRatioHeader.Children.Add(compressRatioLabel);
+
+            _arrangeCompressRatioText = new TextBlock
+            {
+                Text = "4:1",
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(236, 72, 153))
+            };
+            Grid.SetColumn(_arrangeCompressRatioText, 1);
+            compressRatioHeader.Children.Add(_arrangeCompressRatioText);
+            effectsStack.Children.Add(compressRatioHeader);
+
+            _arrangeCompressRatioSlider = new Slider
+            {
+                Minimum = 2.0,
+                Maximum = 10.0,
+                Value = 4.0,
+                TickFrequency = 0.5,
+                IsSnapToTickEnabled = true,
+                Margin = new Thickness(20, 0, 0, 8),
+                Visibility = Visibility.Collapsed
+            };
+            _arrangeCompressRatioSlider.ValueChanged += (s, e) =>
+            {
+                if (_arrangeCompressRatioText != null) _arrangeCompressRatioText.Text = string.Format("{0:0.0}:1", _arrangeCompressRatioSlider.Value);
+            };
+            effectsStack.Children.Add(_arrangeCompressRatioSlider);
+
+            _arrangeReverbCheckBox = new CheckBox
+            {
+                Content = "🌊 Hall-Effekt / Reverb (Räumliche Tiefe)",
+                IsChecked = false,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            _arrangeReverbCheckBox.Checked += (s, e) => UpdateReverbVisibility();
+            _arrangeReverbCheckBox.Unchecked += (s, e) => UpdateReverbVisibility();
+            effectsStack.Children.Add(_arrangeReverbCheckBox);
+
+            // Reverb Amount (initially hidden)
+            var reverbAmountHeader = new Grid { Margin = new Thickness(20, 0, 0, 8), Visibility = Visibility.Collapsed };
+            reverbAmountHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            reverbAmountHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var reverbAmountLabel = new TextBlock
+            {
+                Text = "Hall-Intensität:",
+                FontSize = 11,
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184))
+            };
+            reverbAmountHeader.Children.Add(reverbAmountLabel);
+
+            _arrangeReverbAmountText = new TextBlock
+            {
+                Text = "30%",
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(236, 72, 153))
+            };
+            Grid.SetColumn(_arrangeReverbAmountText, 1);
+            reverbAmountHeader.Children.Add(_arrangeReverbAmountText);
+            effectsStack.Children.Add(reverbAmountHeader);
+
+            _arrangeReverbAmountSlider = new Slider
+            {
+                Minimum = 10.0,
+                Maximum = 80.0,
+                Value = 30.0,
+                TickFrequency = 5.0,
+                IsSnapToTickEnabled = true,
+                Margin = new Thickness(20, 0, 0, 0),
+                Visibility = Visibility.Collapsed
+            };
+            _arrangeReverbAmountSlider.ValueChanged += (s, e) =>
+            {
+                if (_arrangeReverbAmountText != null) _arrangeReverbAmountText.Text = string.Format("{0:0}%", _arrangeReverbAmountSlider.Value);
+            };
+            effectsStack.Children.Add(_arrangeReverbAmountSlider);
+
+            arrangeStack.Children.Add(CreateCard("PROFESSIONELLE EFFEKTE", effectsStack));
+
+            // Process Button
+            var processButtonStack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 14) };
+            _btnProcessArrange = CreateStyledButton("🎛  Audio professionell bearbeiten", Color.FromRgb(236, 72, 153), Color.FromRgb(219, 39, 119), 44, 320);
+            _btnProcessArrange.FontWeight = FontWeights.Bold;
+            _btnProcessArrange.FontSize = 13;
+            _btnProcessArrange.Click += (s, e) => ProcessArrangeAudio();
+            processButtonStack.Children.Add(_btnProcessArrange);
+            arrangeStack.Children.Add(processButtonStack);
+
+            // Card 4: Processing Log
+            var arrangeLogStack = new StackPanel();
+            _arrangeLogTextBox = new TextBox
+            {
+                Height = 180,
+                IsReadOnly = true,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
+                FontFamily = new FontFamily("Consolas, Courier New"),
+                FontSize = 11,
+                Text = "Bereit für Audio-Bearbeitung. Wählen Sie eine Datei und passen Sie die EQ-Einstellungen an."
+            };
+            arrangeLogStack.Children.Add(_arrangeLogTextBox);
+            arrangeStack.Children.Add(CreateCard("VERARBEITUNGS-PROTOKOLL", arrangeLogStack));
+
+            arrangeScrollViewer.Content = arrangeStack;
+
             // --- FOOTER ---
             var footerBorder = new Border
             {
@@ -1013,6 +1448,115 @@ namespace ErAudioTool.UI
             }
         }
 
+        private void LoadExistingRecordings()
+        {
+            try
+            {
+                if (!Directory.Exists(_outputDirectory))
+                {
+                    return;
+                }
+
+                // Get all WAV files in the output directory
+                var files = Directory.GetFiles(_outputDirectory, "*.wav")
+                    .OrderByDescending(f => new FileInfo(f).CreationTime)
+                    .Take(20) // Load last 20 recordings
+                    .ToArray();
+
+                foreach (var filePath in files)
+                {
+                    try
+                    {
+                        var fileInfo = new FileInfo(filePath);
+                        if (!fileInfo.Exists) continue;
+
+                        // Try to get duration from WAV file
+                        TimeSpan duration = TimeSpan.Zero;
+                        try
+                        {
+                            duration = GetWavFileDuration(filePath);
+                        }
+                        catch { }
+
+                        AddRecordingToHistory(filePath, duration, fileInfo.Length, false);
+                    }
+                    catch
+                    {
+                        // Skip files that can't be read
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore errors when loading existing recordings
+            }
+        }
+
+        private TimeSpan GetWavFileDuration(string filePath)
+        {
+            try
+            {
+                using (var fs = File.OpenRead(filePath))
+                using (var br = new BinaryReader(fs))
+                {
+                    // Read WAV header
+                    var riff = new string(br.ReadChars(4));
+                    if (riff != "RIFF") return TimeSpan.Zero;
+
+                    br.ReadInt32(); // file size
+                    var wave = new string(br.ReadChars(4));
+                    if (wave != "WAVE") return TimeSpan.Zero;
+
+                    int channels = 2;
+                    int sampleRate = 44100;
+                    int bitsPerSample = 16;
+                    int dataSize = 0;
+
+                    // Find fmt and data chunks
+                    while (fs.Position < fs.Length - 8)
+                    {
+                        var chunkId = new string(br.ReadChars(4));
+                        var chunkSize = br.ReadInt32();
+
+                        if (chunkId == "fmt ")
+                        {
+                            br.ReadInt16(); // audio format
+                            channels = br.ReadInt16();
+                            sampleRate = br.ReadInt32();
+                            br.ReadInt32(); // byte rate
+                            br.ReadInt16(); // block align
+                            bitsPerSample = br.ReadInt16();
+
+                            if (chunkSize > 16)
+                            {
+                                br.ReadBytes(chunkSize - 16);
+                            }
+                        }
+                        else if (chunkId == "data")
+                        {
+                            dataSize = chunkSize;
+                            break;
+                        }
+                        else
+                        {
+                            br.ReadBytes(chunkSize);
+                        }
+                    }
+
+                    if (dataSize > 0 && sampleRate > 0 && channels > 0 && bitsPerSample > 0)
+                    {
+                        int bytesPerSample = bitsPerSample / 8;
+                        int totalSamples = dataSize / (channels * bytesPerSample);
+                        double durationSeconds = (double)totalSamples / sampleRate;
+                        return TimeSpan.FromSeconds(durationSeconds);
+                    }
+                }
+            }
+            catch { }
+
+            return TimeSpan.Zero;
+        }
+
         private void DeviceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var dev = _deviceComboBox.SelectedItem as AudioDeviceInfo;
@@ -1105,6 +1649,7 @@ namespace ErAudioTool.UI
                     _statusPillBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(16, 185, 129));
 
                     _btnRecord.Content = "●  Aufnahme starten";
+                    _btnRecord.IsEnabled = true;
                     ApplyButtonColor(_btnRecord, Color.FromRgb(239, 68, 68), Color.FromRgb(220, 38, 38));
                     _btnPause.IsEnabled = false;
                     _btnPause.Content = "⏸  Pause";
@@ -1173,13 +1718,31 @@ namespace ErAudioTool.UI
             }
         }
 
-        private void AddRecordingToHistory(string filePath, TimeSpan duration, long fileSize)
+        private void AddRecordingToHistory(string filePath, TimeSpan duration, long fileSize, bool isNewRecording = true)
         {
             string fileName = Path.GetFileName(filePath);
             string durStr = string.Format("{0:00}:{1:00}:{2:00}", (int)duration.TotalHours, duration.Minutes, duration.Seconds);
             double mb = (double)fileSize / (1024 * 1024);
             string sizeStr = string.Format("{0:0.0} MB", mb);
-            string timeStr = DateTime.Now.ToString("HH:mm:ss");
+
+            // For existing recordings, show file creation time instead of current time
+            string timeStr;
+            if (isNewRecording)
+            {
+                timeStr = DateTime.Now.ToString("HH:mm:ss");
+            }
+            else
+            {
+                try
+                {
+                    var fileInfo = new FileInfo(filePath);
+                    timeStr = fileInfo.CreationTime.ToString("yyyy-MM-dd HH:mm");
+                }
+                catch
+                {
+                    timeStr = "Unbekannt";
+                }
+            }
 
             var item = new RecordingItem
             {
@@ -1266,9 +1829,11 @@ namespace ErAudioTool.UI
             {
                 _recordTabContent.Visibility = Visibility.Collapsed;
                 _converterTabContent.Visibility = Visibility.Collapsed;
+                _arrangeTabContent.Visibility = Visibility.Collapsed;
                 _midiTabContent.Visibility = Visibility.Visible;
                 _btnTabRecord.Opacity = 0.6;
                 _btnTabConvert.Opacity = 0.6;
+                _btnTabArrange.Opacity = 0.6;
                 _btnTabMidi.Opacity = 1.0;
 
                 if (!string.IsNullOrEmpty(filePath))
@@ -1288,9 +1853,11 @@ namespace ErAudioTool.UI
             {
                 _midiTabContent.Visibility = Visibility.Collapsed;
                 _converterTabContent.Visibility = Visibility.Collapsed;
+                _arrangeTabContent.Visibility = Visibility.Collapsed;
                 _recordTabContent.Visibility = Visibility.Visible;
                 _btnTabMidi.Opacity = 0.6;
                 _btnTabConvert.Opacity = 0.6;
+                _btnTabArrange.Opacity = 0.6;
                 _btnTabRecord.Opacity = 1.0;
             }
         }
@@ -1301,10 +1868,27 @@ namespace ErAudioTool.UI
             {
                 _recordTabContent.Visibility = Visibility.Collapsed;
                 _midiTabContent.Visibility = Visibility.Collapsed;
+                _arrangeTabContent.Visibility = Visibility.Collapsed;
                 _converterTabContent.Visibility = Visibility.Visible;
                 _btnTabRecord.Opacity = 0.6;
                 _btnTabMidi.Opacity = 0.6;
+                _btnTabArrange.Opacity = 0.6;
                 _btnTabConvert.Opacity = 1.0;
+            }
+        }
+
+        private void SwitchToArrangeTab()
+        {
+            if (_arrangeTabContent != null)
+            {
+                _recordTabContent.Visibility = Visibility.Collapsed;
+                _midiTabContent.Visibility = Visibility.Collapsed;
+                _converterTabContent.Visibility = Visibility.Collapsed;
+                _arrangeTabContent.Visibility = Visibility.Visible;
+                _btnTabRecord.Opacity = 0.6;
+                _btnTabMidi.Opacity = 0.6;
+                _btnTabConvert.Opacity = 0.6;
+                _btnTabArrange.Opacity = 1.0;
             }
         }
 
@@ -1509,6 +2093,226 @@ namespace ErAudioTool.UI
                     }
                     _midiLogTextBox.ScrollToEnd();
                 });
+            });
+        }
+
+        private void SelectArrangeInputFile()
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Audiodateien (*.wav;*.mp3;*.ogg;*.flac;*.aac)|*.wav;*.mp3;*.ogg;*.flac;*.aac|WAV Dateien (*.wav)|*.wav|Alle Dateien (*.*)|*.*",
+                Title = "Audiodatei für Bearbeitung auswählen"
+            };
+            if (dlg.ShowDialog() == true)
+            {
+                _arrangeInputTextBox.Text = dlg.FileName;
+                string dir = Path.GetDirectoryName(dlg.FileName);
+                string baseName = Path.GetFileNameWithoutExtension(dlg.FileName);
+                _arrangeOutputTextBox.Text = Path.Combine(dir, baseName + "_arranged.wav");
+            }
+        }
+
+        private void SelectArrangeOutputFile()
+        {
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "WAV Dateien (*.wav)|*.wav|MP3 Dateien (*.mp3)|*.mp3|FLAC Dateien (*.flac)|*.flac|Alle Dateien (*.*)|*.*",
+                Title = "Speicherort für bearbeitete Audiodatei wählen"
+            };
+            if (!string.IsNullOrEmpty(_arrangeOutputTextBox.Text))
+            {
+                try
+                {
+                    dlg.InitialDirectory = Path.GetDirectoryName(_arrangeOutputTextBox.Text);
+                    dlg.FileName = Path.GetFileName(_arrangeOutputTextBox.Text);
+                }
+                catch { }
+            }
+            if (dlg.ShowDialog() == true)
+            {
+                _arrangeOutputTextBox.Text = dlg.FileName;
+            }
+        }
+
+        private void UpdateCompressorVisibility()
+        {
+            if (_arrangeCompressCheckBox == null) return;
+            bool isChecked = _arrangeCompressCheckBox.IsChecked == true;
+
+            // Find the compressor controls in the visual tree
+            var effectsStack = _arrangeCompressCheckBox.Parent as StackPanel;
+            if (effectsStack != null)
+            {
+                foreach (var child in effectsStack.Children)
+                {
+                    if (child is Grid grid && grid.Margin.Left == 20)
+                    {
+                        // This is the compressor ratio header
+                        bool foundRatio = false;
+                        foreach (var gridChild in grid.Children)
+                        {
+                            if (gridChild is TextBlock tb && tb.Text == "Kompressions-Verhältnis:")
+                            {
+                                foundRatio = true;
+                                break;
+                            }
+                        }
+                        if (foundRatio)
+                        {
+                            grid.Visibility = isChecked ? Visibility.Visible : Visibility.Collapsed;
+                        }
+                    }
+                    else if (child is Slider slider && slider.Margin.Left == 20 && slider == _arrangeCompressRatioSlider)
+                    {
+                        slider.Visibility = isChecked ? Visibility.Visible : Visibility.Collapsed;
+                    }
+                }
+            }
+        }
+
+        private void UpdateReverbVisibility()
+        {
+            if (_arrangeReverbCheckBox == null) return;
+            bool isChecked = _arrangeReverbCheckBox.IsChecked == true;
+
+            // Find the reverb controls in the visual tree
+            var effectsStack = _arrangeReverbCheckBox.Parent as StackPanel;
+            if (effectsStack != null)
+            {
+                foreach (var child in effectsStack.Children)
+                {
+                    if (child is Grid grid && grid.Margin.Left == 20)
+                    {
+                        // This is the reverb amount header
+                        bool foundReverb = false;
+                        foreach (var gridChild in grid.Children)
+                        {
+                            if (gridChild is TextBlock tb && tb.Text == "Hall-Intensität:")
+                            {
+                                foundReverb = true;
+                                break;
+                            }
+                        }
+                        if (foundReverb)
+                        {
+                            grid.Visibility = isChecked ? Visibility.Visible : Visibility.Collapsed;
+                        }
+                    }
+                    else if (child is Slider slider && slider.Margin.Left == 20 && slider == _arrangeReverbAmountSlider)
+                    {
+                        slider.Visibility = isChecked ? Visibility.Visible : Visibility.Collapsed;
+                    }
+                }
+            }
+        }
+
+        private void ProcessArrangeAudio()
+        {
+            string inFile = _arrangeInputTextBox.Text.Trim();
+            string outFile = _arrangeOutputTextBox.Text.Trim();
+
+            if (string.IsNullOrEmpty(inFile) || !File.Exists(inFile))
+            {
+                MessageBox.Show(this, "Bitte wählen Sie eine gültige Eingangs-Audiodatei aus.", "Datei fehlt", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(outFile))
+            {
+                string dir = Path.GetDirectoryName(inFile);
+                outFile = Path.Combine(dir, Path.GetFileNameWithoutExtension(inFile) + "_arranged.wav");
+                _arrangeOutputTextBox.Text = outFile;
+            }
+
+            _btnProcessArrange.IsEnabled = false;
+            _arrangeLogTextBox.Clear();
+            _arrangeLogTextBox.AppendText(string.Format("[{0}] Starte professionelle Audio-Bearbeitung...\n", DateTime.Now.ToString("HH:mm:ss")));
+            _arrangeLogTextBox.AppendText(string.Format("Eingabe: {0}\n", inFile));
+            _arrangeLogTextBox.AppendText(string.Format("Ausgabe: {0}\n\n", outFile));
+
+            // Collect settings
+            double bassGain = _eqBassSlider?.Value ?? 0.0;
+            double midGain = _eqMidSlider?.Value ?? 0.0;
+            double trebleGain = _eqTrebleSlider?.Value ?? 0.0;
+            double masterVolume = _masterVolumeSlider?.Value ?? 0.0;
+            bool normalize = _arrangeNormalizeCheckBox?.IsChecked == true;
+            bool compress = _arrangeCompressCheckBox?.IsChecked == true;
+            double compressRatio = _arrangeCompressRatioSlider?.Value ?? 4.0;
+            bool reverb = _arrangeReverbCheckBox?.IsChecked == true;
+            double reverbAmount = _arrangeReverbAmountSlider?.Value ?? 30.0;
+
+            _arrangeLogTextBox.AppendText("=== Einstellungen ===\n");
+            _arrangeLogTextBox.AppendText(string.Format("Bass: {0:+0;-0;0} dB, Mitten: {1:+0;-0;0} dB, Höhen: {2:+0;-0;0} dB\n", bassGain, midGain, trebleGain));
+            _arrangeLogTextBox.AppendText(string.Format("Master-Lautstärke: {0:+0;-0;0} dB\n", masterVolume));
+            _arrangeLogTextBox.AppendText(string.Format("Normalisierung: {0}\n", normalize ? "Ja" : "Nein"));
+            _arrangeLogTextBox.AppendText(string.Format("Kompressor: {0}", compress ? string.Format("Ja ({0:0.0}:1)\n", compressRatio) : "Nein\n"));
+            _arrangeLogTextBox.AppendText(string.Format("Hall-Effekt: {0}\n\n", reverb ? string.Format("Ja ({0:0}%)\n", reverbAmount) : "Nein\n"));
+
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        _arrangeLogTextBox.AppendText(string.Format("[{0}] Lade Audiodatei...\n", DateTime.Now.ToString("HH:mm:ss")));
+                        _arrangeLogTextBox.ScrollToEnd();
+                    });
+
+                    // Use AudioConverterService to process the file
+                    var processor = new AudioArrangeProcessor();
+                    var result = processor.ProcessAudio(inFile, outFile, new AudioArrangeOptions
+                    {
+                        BassGainDb = bassGain,
+                        MidGainDb = midGain,
+                        TrebleGainDb = trebleGain,
+                        MasterVolumeDb = masterVolume,
+                        Normalize = normalize,
+                        Compress = compress,
+                        CompressionRatio = compressRatio,
+                        Reverb = reverb,
+                        ReverbAmount = reverbAmount / 100.0
+                    }, msg =>
+                    {
+                        Dispatcher.InvokeAsync(() =>
+                        {
+                            _arrangeLogTextBox.AppendText(string.Format("[{0}] {1}\n", DateTime.Now.ToString("HH:mm:ss"), msg));
+                            _arrangeLogTextBox.ScrollToEnd();
+                        });
+                    });
+
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        _btnProcessArrange.IsEnabled = true;
+                        if (result.Success)
+                        {
+                            _arrangeLogTextBox.AppendText(string.Format("\n✅ ERFOLG: Datei erfolgreich bearbeitet!\n"));
+                            _arrangeLogTextBox.AppendText(string.Format("Ausgabedatei: {0}\n", outFile));
+
+                            var fileInfo = new FileInfo(outFile);
+                            if (fileInfo.Exists)
+                            {
+                                _arrangeLogTextBox.AppendText(string.Format("Dateigröße: {0:0.0} MB\n", fileInfo.Length / (1024.0 * 1024.0)));
+                            }
+
+                            MessageBox.Show(this, "Audio wurde erfolgreich bearbeitet!\n\n" + outFile, "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        else
+                        {
+                            _arrangeLogTextBox.AppendText(string.Format("\n❌ FEHLER: {0}\n", result.ErrorMessage));
+                            MessageBox.Show(this, "Fehler bei der Bearbeitung:\n\n" + result.ErrorMessage, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                        _arrangeLogTextBox.ScrollToEnd();
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        _btnProcessArrange.IsEnabled = true;
+                        _arrangeLogTextBox.AppendText(string.Format("\n❌ AUSNAHME: {0}\n", ex.Message));
+                        MessageBox.Show(this, "Fehler:\n\n" + ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                    });
+                }
             });
         }
     }
