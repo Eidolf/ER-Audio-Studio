@@ -2759,7 +2759,17 @@ namespace ErAudioTool.UI
                 index++;
             }
 
+            // Auto-select first segment if available
+            if (_segmentsListBox.Items.Count > 0)
+            {
+                _segmentsListBox.SelectedIndex = 0;
+            }
+
             _btnEditorExport.IsEnabled = _editorEngine.Segments.Count > 0;
+
+            _editorLogTextBox.AppendText(string.Format("[{0}] Segmente aktualisiert: {1} Segment(e)\n",
+                DateTime.Now.ToString("HH:mm:ss"), _editorEngine.Segments.Count));
+            _editorLogTextBox.ScrollToEnd();
         }
 
         private void OnSegmentSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -2828,17 +2838,35 @@ namespace ErAudioTool.UI
 
         private void EditorCutSelection()
         {
-            if (_segmentsListBox.SelectedItem == null || !_waveformControl.HasSelection) return;
+            _editorLogTextBox.AppendText(string.Format("[{0}] EditorCutSelection aufgerufen\n", DateTime.Now.ToString("HH:mm:ss")));
+            _editorLogTextBox.ScrollToEnd();
+
+            if (_segmentsListBox.SelectedItem == null || !_waveformControl.HasSelection)
+            {
+                _editorLogTextBox.AppendText(string.Format("[{0}] Kein Segment oder keine Auswahl\n", DateTime.Now.ToString("HH:mm:ss")));
+                return;
+            }
 
             Grid selectedGrid = _segmentsListBox.SelectedItem as Grid;
-            if (selectedGrid == null) return;
+            if (selectedGrid == null)
+            {
+                _editorLogTextBox.AppendText(string.Format("[{0}] Grid ist null\n", DateTime.Now.ToString("HH:mm:ss")));
+                return;
+            }
 
             string segmentId = selectedGrid.Tag as string;
             var segment = _editorEngine.Segments.FirstOrDefault(s => s.Id == segmentId);
-            if (segment == null) return;
+            if (segment == null)
+            {
+                _editorLogTextBox.AppendText(string.Format("[{0}] Segment nicht gefunden\n", DateTime.Now.ToString("HH:mm:ss")));
+                return;
+            }
 
             double startTime = _waveformControl.SelectionStartTime * segment.Duration;
             double endTime = _waveformControl.SelectionEndTime * segment.Duration;
+
+            _editorLogTextBox.AppendText(string.Format("[{0}] Schneide von {1:0.2}s bis {2:0.2}s\n",
+                DateTime.Now.ToString("HH:mm:ss"), startTime, endTime));
 
             var cutSegment = _editorEngine.CutSegment(segmentId, startTime, endTime, msg =>
             {
@@ -2855,21 +2883,44 @@ namespace ErAudioTool.UI
                 _editorLogTextBox.AppendText(string.Format("[{0}] Ausgeschnittener Bereich als neues Segment hinzugefügt\n", DateTime.Now.ToString("HH:mm:ss")));
                 RefreshSegmentsList();
                 _waveformControl.ClearSelection();
+                UpdateEditorButtons();
+            }
+            else
+            {
+                _editorLogTextBox.AppendText(string.Format("[{0}] CutSegment fehlgeschlagen\n", DateTime.Now.ToString("HH:mm:ss")));
             }
         }
 
         private void EditorSplitSelection()
         {
-            if (_segmentsListBox.SelectedItem == null || !_waveformControl.HasSelection) return;
+            _editorLogTextBox.AppendText(string.Format("[{0}] EditorSplitSelection aufgerufen\n", DateTime.Now.ToString("HH:mm:ss")));
+            _editorLogTextBox.ScrollToEnd();
+
+            if (_segmentsListBox.SelectedItem == null || !_waveformControl.HasSelection)
+            {
+                _editorLogTextBox.AppendText(string.Format("[{0}] Kein Segment oder keine Auswahl\n", DateTime.Now.ToString("HH:mm:ss")));
+                return;
+            }
 
             Grid selectedGrid = _segmentsListBox.SelectedItem as Grid;
-            if (selectedGrid == null) return;
+            if (selectedGrid == null)
+            {
+                _editorLogTextBox.AppendText(string.Format("[{0}] Grid ist null\n", DateTime.Now.ToString("HH:mm:ss")));
+                return;
+            }
 
             string segmentId = selectedGrid.Tag as string;
             var segment = _editorEngine.Segments.FirstOrDefault(s => s.Id == segmentId);
-            if (segment == null) return;
+            if (segment == null)
+            {
+                _editorLogTextBox.AppendText(string.Format("[{0}] Segment nicht gefunden\n", DateTime.Now.ToString("HH:mm:ss")));
+                return;
+            }
 
             double splitTime = _waveformControl.SelectionStartTime * segment.Duration;
+
+            _editorLogTextBox.AppendText(string.Format("[{0}] Teile bei {1:0.2}s\n",
+                DateTime.Now.ToString("HH:mm:ss"), splitTime));
 
             _editorEngine.SplitSegment(segmentId, splitTime, msg =>
             {
@@ -2882,6 +2933,7 @@ namespace ErAudioTool.UI
 
             RefreshSegmentsList();
             _waveformControl.ClearSelection();
+            UpdateEditorButtons();
         }
 
         private void EditorDeleteSegment()
@@ -3046,14 +3098,27 @@ namespace ErAudioTool.UI
 
         private void EditorPlaySegment()
         {
-            if (_segmentsListBox.SelectedItem == null) return;
+            _editorLogTextBox.AppendText(string.Format("[{0}] EditorPlaySegment aufgerufen\n", DateTime.Now.ToString("HH:mm:ss")));
+            _editorLogTextBox.ScrollToEnd();
+
+            if (_segmentsListBox.SelectedItem == null)
+            {
+                _editorLogTextBox.AppendText(string.Format("[{0}] Kein Segment ausgewählt\n", DateTime.Now.ToString("HH:mm:ss")));
+                return;
+            }
 
             Grid selectedGrid = _segmentsListBox.SelectedItem as Grid;
             if (selectedGrid == null) return;
 
             string segmentId = selectedGrid.Tag as string;
             var segment = _editorEngine.Segments.FirstOrDefault(s => s.Id == segmentId);
-            if (segment == null) return;
+            if (segment == null)
+            {
+                _editorLogTextBox.AppendText(string.Format("[{0}] Segment nicht gefunden\n", DateTime.Now.ToString("HH:mm:ss")));
+                return;
+            }
+
+            _editorLogTextBox.AppendText(string.Format("[{0}] Erstelle Vorschau-Datei...\n", DateTime.Now.ToString("HH:mm:ss")));
 
             // Create temporary WAV file to play
             string tempFile = Path.Combine(Path.GetTempPath(), "editor_preview_" + Guid.NewGuid().ToString() + ".wav");
@@ -3125,6 +3190,8 @@ namespace ErAudioTool.UI
                 {
                     _btnEditorPlay.IsEnabled = true;
                     _btnEditorStop.IsEnabled = false;
+                    _editorLogTextBox.AppendText(string.Format("[{0}] Wiedergabe beendet\n", DateTime.Now.ToString("HH:mm:ss")));
+                    _editorLogTextBox.ScrollToEnd();
                     try { File.Delete(tempFile); } catch { }
                 });
             };
@@ -3133,6 +3200,9 @@ namespace ErAudioTool.UI
 
         private void EditorStopPlayback()
         {
+            _editorLogTextBox.AppendText(string.Format("[{0}] EditorStopPlayback aufgerufen\n", DateTime.Now.ToString("HH:mm:ss")));
+            _editorLogTextBox.ScrollToEnd();
+
             _player.Stop();
             _btnEditorPlay.IsEnabled = true;
             _btnEditorStop.IsEnabled = false;
@@ -3142,6 +3212,9 @@ namespace ErAudioTool.UI
 
         private void EditorZoomIn()
         {
+            _editorLogTextBox.AppendText(string.Format("[{0}] EditorZoomIn aufgerufen\n", DateTime.Now.ToString("HH:mm:ss")));
+            _editorLogTextBox.ScrollToEnd();
+
             _editorZoomLevel = Math.Min(_editorZoomLevel * 2.0, 16.0);
             UpdateWaveformZoom();
             _editorLogTextBox.AppendText(string.Format("[{0}] Zoom: {1:0.0}x\n", DateTime.Now.ToString("HH:mm:ss"), _editorZoomLevel));
@@ -3151,6 +3224,9 @@ namespace ErAudioTool.UI
 
         private void EditorZoomOut()
         {
+            _editorLogTextBox.AppendText(string.Format("[{0}] EditorZoomOut aufgerufen\n", DateTime.Now.ToString("HH:mm:ss")));
+            _editorLogTextBox.ScrollToEnd();
+
             _editorZoomLevel = Math.Max(_editorZoomLevel / 2.0, 1.0);
             UpdateWaveformZoom();
             _editorLogTextBox.AppendText(string.Format("[{0}] Zoom: {1:0.0}x\n", DateTime.Now.ToString("HH:mm:ss"), _editorZoomLevel));
@@ -3160,6 +3236,9 @@ namespace ErAudioTool.UI
 
         private void EditorZoomReset()
         {
+            _editorLogTextBox.AppendText(string.Format("[{0}] EditorZoomReset aufgerufen\n", DateTime.Now.ToString("HH:mm:ss")));
+            _editorLogTextBox.ScrollToEnd();
+
             _editorZoomLevel = 1.0;
             _editorZoomOffset = 0.0;
             UpdateWaveformZoom();
