@@ -731,6 +731,10 @@ namespace ErAudioTool.UI
                 return;
             }
 
+            AudioFormat format = (AudioFormat)_formatComboBox.SelectedIndex;
+            int bitrate = GetSelectedBitrate();
+            int sampleRate = GetSelectedSampleRate();
+
             // Check if input is MIDI file
             string ext = Path.GetExtension(inputFile).ToLowerInvariant();
             if (ext == ".mid" || ext == ".midi")
@@ -762,10 +766,6 @@ namespace ErAudioTool.UI
                 _sampleRateComboBox.IsEnabled = false;
                 _progressBar.Value = 0;
                 _logTextBox.Clear();
-
-                AudioFormat format = (AudioFormat)_formatComboBox.SelectedIndex;
-                int bitrate = GetSelectedBitrate();
-                int sampleRate = GetSelectedSampleRate();
 
                 System.Threading.ThreadPool.QueueUserWorkItem(_ =>
                 {
@@ -905,10 +905,6 @@ namespace ErAudioTool.UI
             _sampleRateComboBox.IsEnabled = false;
             _progressBar.Value = 0;
             _logTextBox.Clear();
-
-            AudioFormat format = (AudioFormat)_formatComboBox.SelectedIndex;
-            int bitrate = GetSelectedBitrate();
-            int sampleRate = GetSelectedSampleRate();
 
             System.Threading.ThreadPool.QueueUserWorkItem(_ =>
             {
