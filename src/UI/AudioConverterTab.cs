@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows;
@@ -32,14 +32,20 @@ namespace ErAudioTool.UI
         private ProgressBar _progressBar;
         private TextBlock _codecStatusText;
         private Border _codecStatusBorder;
+        private TextBlock _midiSynthStatusText;
+        private Border _midiSynthStatusBorder;
 
         // Codec Management UI
         private Window _codecWindow;
         private Button _btnDownloadCodec;
+        private Button _btnDownloadFluidSynth;
+        private Button _btnDownloadSoundFont;
         private Button _btnDeleteCodec;
         private TextBlock _codecSizeText;
         private ProgressBar _codecDownloadProgress;
         private TextBlock _codecDownloadStatusText;
+        private TextBlock _fsStatusLabel;
+        private TextBlock _sfStatusLabel;
 
         // Batch Conversion UI
         private ListBox _batchListBox;
@@ -66,7 +72,7 @@ namespace ErAudioTool.UI
 
             var mainStack = new StackPanel();
 
-            // Codec Status Card
+            // Codec & Synth Status Card
             mainStack.Children.Add(BuildCodecStatusCard());
 
             // Single File Conversion Card
@@ -75,7 +81,7 @@ namespace ErAudioTool.UI
             // Batch Conversion Card
             mainStack.Children.Add(BuildBatchConversionCard());
 
-            // Log Card
+            // Conversion Log Card
             mainStack.Children.Add(BuildLogCard());
 
             scrollViewer.Content = mainStack;
@@ -92,38 +98,70 @@ namespace ErAudioTool.UI
 
             var leftStack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
 
-            var statusLabel = new TextBlock
+            // FFmpeg Status Badge
+            var ffmpegLabel = new TextBlock
             {
-                Text = "FFmpeg Status:",
-                FontSize = 13,
+                Text = "FFmpeg:",
+                FontSize = 12,
                 Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
-                Margin = new Thickness(0, 0, 12, 0),
+                Margin = new Thickness(0, 0, 8, 0),
                 VerticalAlignment = VerticalAlignment.Center
             };
-            leftStack.Children.Add(statusLabel);
+            leftStack.Children.Add(ffmpegLabel);
 
             _codecStatusBorder = new Border
             {
                 Background = new SolidColorBrush(Color.FromArgb(50, 239, 68, 68)),
                 BorderBrush = new SolidColorBrush(Color.FromRgb(239, 68, 68)),
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(12),
-                Padding = new Thickness(12, 4, 12, 4)
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(10, 3, 10, 3),
+                Margin = new Thickness(0, 0, 16, 0)
             };
 
             _codecStatusText = new TextBlock
             {
                 Text = "✗ Nicht installiert",
-                FontSize = 12,
+                FontSize = 11,
                 FontWeight = FontWeights.Bold,
                 Foreground = new SolidColorBrush(Color.FromRgb(239, 68, 68))
             };
             _codecStatusBorder.Child = _codecStatusText;
             leftStack.Children.Add(_codecStatusBorder);
 
+            // MIDI Synth Status Badge
+            var midiLabel = new TextBlock
+            {
+                Text = "MIDI Synthesizer:",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Margin = new Thickness(0, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            leftStack.Children.Add(midiLabel);
+
+            _midiSynthStatusBorder = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(50, 100, 116, 139)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(10, 3, 10, 3)
+            };
+
+            _midiSynthStatusText = new TextBlock
+            {
+                Text = "Standard (Sinus)",
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184))
+            };
+            _midiSynthStatusBorder.Child = _midiSynthStatusText;
+            leftStack.Children.Add(_midiSynthStatusBorder);
+
             statusGrid.Children.Add(leftStack);
 
-            _btnManageCodecs = CreateStyledButton("⚙️ Codecs verwalten", Color.FromRgb(99, 102, 241), Color.FromRgb(79, 70, 229), 34);
+            _btnManageCodecs = CreateStyledButton("⚙️ Downloads & Codecs verwalten", Color.FromRgb(99, 102, 241), Color.FromRgb(79, 70, 229), 34);
             _btnManageCodecs.Click += (s, e) => ShowCodecManagementWindow();
             Grid.SetColumn(_btnManageCodecs, 1);
             statusGrid.Children.Add(_btnManageCodecs);
@@ -132,7 +170,7 @@ namespace ErAudioTool.UI
 
             UpdateCodecStatus();
 
-            return CreateCard("CODEC-STATUS & VERWALTUNG", stack);
+            return CreateCard("CODEC- & SYNTHESIZER-STATUS", stack);
         }
 
         private Border BuildSingleConversionCard()
@@ -142,7 +180,7 @@ namespace ErAudioTool.UI
             // Input File
             var inLabel = new TextBlock
             {
-                Text = "Eingangsdatei (WAV, MP3, FLAC, OGG, M4A, etc.):",
+                Text = "Eingangsdatei (WAV, MP3, FLAC, OGG, M4A, MIDI, etc.):",
                 FontSize = 12,
                 Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
                 Margin = new Thickness(0, 0, 0, 6)
@@ -201,7 +239,7 @@ namespace ErAudioTool.UI
             };
             outGrid.Children.Add(_outputFileTextBox);
 
-            _btnBrowseOutput = CreateStyledButton("💾 Speicherort...", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
+            _btnBrowseOutput = CreateStyledButton("📁 Speichern unter...", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
             _btnBrowseOutput.Click += (s, e) => BrowseOutputFile();
             Grid.SetColumn(_btnBrowseOutput, 1);
             outGrid.Children.Add(_btnBrowseOutput);
@@ -228,10 +266,9 @@ namespace ErAudioTool.UI
             _formatComboBox = new ComboBox
             {
                 Height = 36,
-                                Foreground = Brushes.White,
-                                FontSize = 13,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                            };
+                FontSize = 13,
+                VerticalContentAlignment = VerticalAlignment.Center
+            };
 
             foreach (AudioFormat format in Enum.GetValues(typeof(AudioFormat)))
             {
@@ -257,10 +294,9 @@ namespace ErAudioTool.UI
             _bitrateComboBox = new ComboBox
             {
                 Height = 36,
-                                Foreground = Brushes.White,
-                                FontSize = 13,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                            };
+                FontSize = 13,
+                VerticalContentAlignment = VerticalAlignment.Center
+            };
             _bitrateComboBox.Items.Add("128 kbps");
             _bitrateComboBox.Items.Add("192 kbps");
             _bitrateComboBox.Items.Add("256 kbps");
@@ -284,10 +320,9 @@ namespace ErAudioTool.UI
             _sampleRateComboBox = new ComboBox
             {
                 Height = 36,
-                                Foreground = Brushes.White,
-                                FontSize = 13,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                            };
+                FontSize = 13,
+                VerticalContentAlignment = VerticalAlignment.Center
+            };
             _sampleRateComboBox.Items.Add("Original");
             _sampleRateComboBox.Items.Add("44100 Hz");
             _sampleRateComboBox.Items.Add("48000 Hz");
@@ -322,48 +357,58 @@ namespace ErAudioTool.UI
             _btnConvert.Click += (s, e) => StartConversion();
             stack.Children.Add(_btnConvert);
 
-            return CreateCard("EINZEL-KONVERTIERUNG", stack);
+            return CreateCard("EINZELDATEI KONVERTIERUNG", stack);
         }
 
         private Border BuildBatchConversionCard()
         {
             var stack = new StackPanel();
 
-            var btnGrid = new Grid { Margin = new Thickness(0, 0, 0, 10) };
+            var desc = new TextBlock
+            {
+                Text = "Konvertieren Sie mehrere Dateien gleichzeitig in das ausgewählte Format.",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            stack.Children.Add(desc);
+
+            _batchListBox = new ListBox
+            {
+                Height = 110,
+                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
+                Foreground = Brushes.White,
+                FontSize = 12,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            stack.Children.Add(_batchListBox);
+
+            var btnGrid = new Grid();
             btnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             btnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             btnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             btnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            _btnAddFiles = CreateStyledButton("➕ Dateien hinzufügen", Color.FromRgb(59, 130, 246), Color.FromRgb(37, 99, 235), 32);
+            _btnAddFiles = CreateStyledButton("➕ Dateien hinzufügen", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
             _btnAddFiles.Click += (s, e) => AddBatchFiles();
             btnGrid.Children.Add(_btnAddFiles);
 
-            _btnClearBatch = CreateStyledButton("🗑️ Liste leeren", Color.FromRgb(239, 68, 68), Color.FromRgb(220, 38, 38), 32);
+            _btnClearBatch = CreateStyledButton("🗑️ Liste leeren", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
             _btnClearBatch.Margin = new Thickness(8, 0, 0, 0);
             _btnClearBatch.Click += (s, e) => ClearBatchList();
             Grid.SetColumn(_btnClearBatch, 1);
             btnGrid.Children.Add(_btnClearBatch);
 
-            _btnStartBatch = CreateStyledButton("▶️ Alle konvertieren", Color.FromRgb(34, 197, 94), Color.FromRgb(22, 163, 74), 32);
-            _btnStartBatch.Margin = new Thickness(8, 0, 0, 0);
+            _btnStartBatch = CreateStyledButton("▶ Batch-Konvertierung starten", Color.FromRgb(37, 99, 235), Color.FromRgb(29, 78, 216), 34, 210);
+            _btnStartBatch.FontWeight = FontWeights.Bold;
             _btnStartBatch.Click += (s, e) => StartBatchConversion();
             Grid.SetColumn(_btnStartBatch, 3);
             btnGrid.Children.Add(_btnStartBatch);
 
             stack.Children.Add(btnGrid);
 
-            _batchListBox = new ListBox
-            {
-                MinHeight = 120,
-                MaxHeight = 200,
-                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
-                Foreground = Brushes.White
-            };
-            stack.Children.Add(_batchListBox);
-
-            return CreateCard("BATCH-KONVERTIERUNG (MEHRERE DATEIEN)", stack);
+            return CreateCard("STAPELVERARBEITUNG (BATCH)", stack);
         }
 
         private Border BuildLogCard()
@@ -372,12 +417,12 @@ namespace ErAudioTool.UI
 
             _logTextBox = new TextBox
             {
-                Height = 140,
+                Height = 110,
+                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
                 IsReadOnly = true,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
-                Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
                 FontFamily = new FontFamily("Consolas, Courier New"),
                 FontSize = 11,
                 Text = "Bereit für Konvertierung. Wählen Sie eine Audiodatei aus und klicken Sie auf 'Jetzt konvertieren'."
@@ -389,6 +434,7 @@ namespace ErAudioTool.UI
 
         private void UpdateCodecStatus()
         {
+            // FFmpeg Status
             if (CodecManager.IsFfmpegInstalled())
             {
                 _codecStatusText.Text = "✓ Installiert";
@@ -403,9 +449,35 @@ namespace ErAudioTool.UI
                 _codecStatusBorder.Background = new SolidColorBrush(Color.FromArgb(50, 239, 68, 68));
                 _codecStatusBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(239, 68, 68));
             }
+
+            // MIDI Synth Status
+            if (CodecManager.IsFluidSynthInstalled())
+            {
+                if (CodecManager.HasHighQualitySoundFont())
+                {
+                    _midiSynthStatusText.Text = "✓ Studio HQ (SoundFont)";
+                    _midiSynthStatusText.Foreground = new SolidColorBrush(Color.FromRgb(34, 197, 94));
+                    _midiSynthStatusBorder.Background = new SolidColorBrush(Color.FromArgb(50, 34, 197, 94));
+                    _midiSynthStatusBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(34, 197, 94));
+                }
+                else
+                {
+                    _midiSynthStatusText.Text = "✓ FluidSynth (GM.DLS)";
+                    _midiSynthStatusText.Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248));
+                    _midiSynthStatusBorder.Background = new SolidColorBrush(Color.FromArgb(50, 56, 189, 248));
+                    _midiSynthStatusBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(56, 189, 248));
+                }
+            }
+            else
+            {
+                _midiSynthStatusText.Text = "Standard (Sinuswellen)";
+                _midiSynthStatusText.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+                _midiSynthStatusBorder.Background = new SolidColorBrush(Color.FromArgb(50, 100, 116, 139));
+                _midiSynthStatusBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(100, 116, 139));
+            }
         }
 
-        private void ShowCodecManagementWindow()
+        public void ShowCodecManagementWindow()
         {
             if (_codecWindow != null && _codecWindow.IsVisible)
             {
@@ -415,9 +487,9 @@ namespace ErAudioTool.UI
 
             _codecWindow = new Window
             {
-                Title = "Codec-Verwaltung - FFmpeg",
-                Width = 600,
-                Height = 400,
+                Title = "Downloads & Codec-Verwaltung - ER Audio Studio",
+                Width = 660,
+                Height = 580,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Owner = _parentWindow,
                 Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
@@ -429,87 +501,29 @@ namespace ErAudioTool.UI
             // Title
             var title = new TextBlock
             {
-                Text = "FFmpeg Codec-Verwaltung",
+                Text = "Komponenten & Codec-Verwaltung",
                 FontSize = 18,
                 FontWeight = FontWeights.Bold,
                 Foreground = Brushes.White,
-                Margin = new Thickness(0, 0, 0, 10)
+                Margin = new Thickness(0, 0, 0, 6)
             };
             mainStack.Children.Add(title);
 
             var desc = new TextBlock
             {
-                Text = "FFmpeg wird für die Audio-Konvertierung zwischen verschiedenen Formaten benötigt.\nDie Anwendung kann FFmpeg automatisch herunterladen und installieren.",
+                Text = "Laden Sie optionale Audiokomponenten für beste Konvertierungsqualität und MIDI-Wiedergabe herunter.",
                 FontSize = 12,
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
-                Margin = new Thickness(0, 0, 0, 20),
+                Margin = new Thickness(0, 0, 0, 16),
                 TextWrapping = TextWrapping.Wrap
             };
             mainStack.Children.Add(desc);
 
-            // Status Section
-            var statusCard = new Border
-            {
-                Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(16),
-                Margin = new Thickness(0, 0, 0, 16)
-            };
-
-            var statusStack = new StackPanel();
-
-            var statusLabel = new TextBlock
-            {
-                Text = "Status: " + (CodecManager.IsFfmpegInstalled() ? "✓ Installiert" : "✗ Nicht installiert"),
-                FontSize = 14,
-                FontWeight = FontWeights.Bold,
-                Foreground = CodecManager.IsFfmpegInstalled() ?
-                    new SolidColorBrush(Color.FromRgb(34, 197, 94)) :
-                    new SolidColorBrush(Color.FromRgb(239, 68, 68)),
-                Margin = new Thickness(0, 0, 0, 8)
-            };
-            statusStack.Children.Add(statusLabel);
-
-            _codecSizeText = new TextBlock
-            {
-                Text = "Installationsgröße: " + FormatBytes(CodecManager.GetCodecSize()),
-                FontSize = 12,
-                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184))
-            };
-            statusStack.Children.Add(_codecSizeText);
-
-            var pathLabel = new TextBlock
-            {
-                Text = "Pfad: " + (CodecManager.GetFfmpegPath() ?? "Nicht gefunden"),
-                FontSize = 11,
-                Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
-                Margin = new Thickness(0, 6, 0, 0),
-                TextWrapping = TextWrapping.Wrap
-            };
-            statusStack.Children.Add(pathLabel);
-
-            statusCard.Child = statusStack;
-            mainStack.Children.Add(statusCard);
-
-            // Download Section
-            var downloadCard = new Border
-            {
-                Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(16),
-                Margin = new Thickness(0, 0, 0, 16)
-            };
-
-            var downloadStack = new StackPanel();
-
+            // Progress & Status (global for window)
             _codecDownloadProgress = new ProgressBar
             {
                 Height = 8,
-                Margin = new Thickness(0, 0, 0, 10),
+                Margin = new Thickness(0, 0, 0, 8),
                 Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
                 Foreground = new SolidColorBrush(Color.FromRgb(59, 130, 246)),
                 BorderThickness = new Thickness(0),
@@ -518,45 +532,152 @@ namespace ErAudioTool.UI
                 Value = 0,
                 Visibility = Visibility.Collapsed
             };
-            downloadStack.Children.Add(_codecDownloadProgress);
+            mainStack.Children.Add(_codecDownloadProgress);
 
             _codecDownloadStatusText = new TextBlock
             {
                 Text = "",
                 FontSize = 11,
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
-                Margin = new Thickness(0, 0, 0, 12),
+                Margin = new Thickness(0, 0, 0, 10),
                 Visibility = Visibility.Collapsed
             };
-            downloadStack.Children.Add(_codecDownloadStatusText);
+            mainStack.Children.Add(_codecDownloadStatusText);
 
-            var btnGrid = new Grid();
-            btnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            btnGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            // 1. FFmpeg Card
+            var ffmpegCard = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(14),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            var fStack = new StackPanel();
+            var fGrid = new Grid();
+            fGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            fGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            _btnDownloadCodec = CreateStyledButton("📥 FFmpeg herunterladen (~50 MB)", Color.FromRgb(59, 130, 246), Color.FromRgb(37, 99, 235), 38);
-            _btnDownloadCodec.HorizontalAlignment = HorizontalAlignment.Left;
+            var fInfo = new StackPanel();
+            var fTitle = new TextBlock { Text = "1. FFmpeg Audio-Engine (Konverter)", FontSize = 13, FontWeight = FontWeights.Bold, Foreground = Brushes.White };
+            var fDesc = new TextBlock { Text = "Ermöglicht Konvertierung aller Formate (MP3, FLAC, OGG, AAC, etc.)", FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), Margin = new Thickness(0, 2, 0, 0) };
+            var fStatus = new TextBlock
+            {
+                Text = "Status: " + (CodecManager.IsFfmpegInstalled() ? "✓ Installiert (" + (CodecManager.GetFfmpegPath() ?? "") + ")" : "✗ Nicht installiert"),
+                FontSize = 11,
+                Foreground = CodecManager.IsFfmpegInstalled() ? new SolidColorBrush(Color.FromRgb(34, 197, 94)) : new SolidColorBrush(Color.FromRgb(239, 68, 68)),
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            fInfo.Children.Add(fTitle);
+            fInfo.Children.Add(fDesc);
+            fInfo.Children.Add(fStatus);
+            fGrid.Children.Add(fInfo);
+
+            _btnDownloadCodec = CreateStyledButton(CodecManager.IsFfmpegInstalled() ? "Erneut laden" : "📥 FFmpeg laden (~40 MB)", Color.FromRgb(59, 130, 246), Color.FromRgb(37, 99, 235), 32);
             _btnDownloadCodec.Click += (s, e) => DownloadCodec();
-            btnGrid.Children.Add(_btnDownloadCodec);
+            Grid.SetColumn(_btnDownloadCodec, 1);
+            fGrid.Children.Add(_btnDownloadCodec);
+            fStack.Children.Add(fGrid);
+            ffmpegCard.Child = fStack;
+            mainStack.Children.Add(ffmpegCard);
 
-            _btnDeleteCodec = CreateStyledButton("🗑️ Codecs löschen", Color.FromRgb(239, 68, 68), Color.FromRgb(220, 38, 38), 38);
+            // 2. FluidSynth Card
+            var fsCard = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(14),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            var fsStack = new StackPanel();
+            var fsGrid = new Grid();
+            fsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            fsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var fsInfo = new StackPanel();
+            var fsTitle = new TextBlock { Text = "2. FluidSynth Synthesizer (MIDI zu Audio)", FontSize = 13, FontWeight = FontWeights.Bold, Foreground = Brushes.White };
+            var fsDesc = new TextBlock { Text = "Wandelt MIDI in WAV um – wahlweise mit Windows GM oder SoundFonts", FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), Margin = new Thickness(0, 2, 0, 0) };
+            _fsStatusLabel = new TextBlock
+            {
+                Text = "Status: " + (CodecManager.IsFluidSynthInstalled() ? "✓ Installiert (" + (CodecManager.GetFluidSynthPath() ?? "") + ")" : "✗ Nicht installiert"),
+                FontSize = 11,
+                Foreground = CodecManager.IsFluidSynthInstalled() ? new SolidColorBrush(Color.FromRgb(34, 197, 94)) : new SolidColorBrush(Color.FromRgb(245, 158, 11)),
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            fsInfo.Children.Add(fsTitle);
+            fsInfo.Children.Add(fsDesc);
+            fsInfo.Children.Add(_fsStatusLabel);
+            fsGrid.Children.Add(fsInfo);
+
+            _btnDownloadFluidSynth = CreateStyledButton(CodecManager.IsFluidSynthInstalled() ? "Erneut laden" : "📥 FluidSynth laden (~2.7 MB)", Color.FromRgb(16, 185, 129), Color.FromRgb(5, 150, 105), 32);
+            _btnDownloadFluidSynth.Click += (s, e) => DownloadFluidSynth();
+            Grid.SetColumn(_btnDownloadFluidSynth, 1);
+            fsGrid.Children.Add(_btnDownloadFluidSynth);
+            fsStack.Children.Add(fsGrid);
+            fsCard.Child = fsStack;
+            mainStack.Children.Add(fsCard);
+
+            // 3. SoundFont Card
+            var sfCard = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(14),
+                Margin = new Thickness(0, 0, 0, 14)
+            };
+            var sfStack = new StackPanel();
+            var sfGrid = new Grid();
+            sfGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            sfGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var sfInfo = new StackPanel();
+            var sfTitle = new TextBlock { Text = "3. FluidR3 GM SoundFont (Echte Orchester- & Studio-Samples)", FontSize = 13, FontWeight = FontWeights.Bold, Foreground = Brushes.White };
+            var sfDesc = new TextBlock { Text = "Ersetzt Sinuswellen durch 128 echte akustische & elektronische GM-Instrumente", FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), Margin = new Thickness(0, 2, 0, 0) };
+            _sfStatusLabel = new TextBlock
+            {
+                Text = "Status: " + (CodecManager.HasHighQualitySoundFont() ? "✓ Installiert (" + Path.GetFileName(CodecManager.GetSoundFontPath()) + ")" : (CodecManager.HasSoundFont() ? "ℹ Windows Standard GM.DLS aktiv" : "✗ Nicht installiert")),
+                FontSize = 11,
+                Foreground = CodecManager.HasHighQualitySoundFont() ? new SolidColorBrush(Color.FromRgb(34, 197, 94)) : new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            sfInfo.Children.Add(sfTitle);
+            sfInfo.Children.Add(sfDesc);
+            sfInfo.Children.Add(_sfStatusLabel);
+            sfGrid.Children.Add(sfInfo);
+
+            _btnDownloadSoundFont = CreateStyledButton(CodecManager.HasHighQualitySoundFont() ? "Erneut laden" : "📥 SoundFont laden (~140 MB)", Color.FromRgb(139, 92, 246), Color.FromRgb(124, 58, 237), 32);
+            _btnDownloadSoundFont.Click += (s, e) => DownloadSoundFont();
+            Grid.SetColumn(_btnDownloadSoundFont, 1);
+            sfGrid.Children.Add(_btnDownloadSoundFont);
+            sfStack.Children.Add(sfGrid);
+            sfCard.Child = sfStack;
+            mainStack.Children.Add(sfCard);
+
+            // Bottom bar: Size + Delete button
+            var bottomGrid = new Grid();
+            bottomGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            bottomGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            _codecSizeText = new TextBlock
+            {
+                Text = "Gesamtgröße im codecs-Ordner: " + FormatBytes(CodecManager.GetCodecSize()),
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            bottomGrid.Children.Add(_codecSizeText);
+
+            _btnDeleteCodec = CreateStyledButton("🗑️ Alle Downloads löschen", Color.FromRgb(239, 68, 68), Color.FromRgb(220, 38, 38), 34);
             _btnDeleteCodec.Click += (s, e) => DeleteCodec();
             Grid.SetColumn(_btnDeleteCodec, 1);
-            btnGrid.Children.Add(_btnDeleteCodec);
+            bottomGrid.Children.Add(_btnDeleteCodec);
 
-            downloadStack.Children.Add(btnGrid);
-            downloadCard.Child = downloadStack;
-            mainStack.Children.Add(downloadCard);
-
-            // Info
-            var info = new TextBlock
-            {
-                Text = "ℹ️ FFmpeg ist ein Open-Source-Projekt unter GPL/LGPL Lizenz.\nQuelle: gyan.dev/ffmpeg (offizieller Windows-Build)",
-                FontSize = 10,
-                Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
-                TextWrapping = TextWrapping.Wrap
-            };
-            mainStack.Children.Add(info);
+            mainStack.Children.Add(bottomGrid);
 
             _codecWindow.Content = mainStack;
             _codecWindow.ShowDialog();
@@ -564,11 +685,7 @@ namespace ErAudioTool.UI
 
         private void DownloadCodec()
         {
-            _btnDownloadCodec.IsEnabled = false;
-            _btnDeleteCodec.IsEnabled = false;
-            _codecDownloadProgress.Visibility = Visibility.Visible;
-            _codecDownloadStatusText.Visibility = Visibility.Visible;
-            _codecDownloadStatusText.Text = "Download wird vorbereitet...";
+            SetDownloadUiState(true, "FFmpeg Download wird vorbereitet...");
 
             CodecManager.DownloadFfmpeg(
                 progress =>
@@ -576,22 +693,18 @@ namespace ErAudioTool.UI
                     _parentWindow.Dispatcher.InvokeAsync(() =>
                     {
                         _codecDownloadProgress.Value = progress;
-                        _codecDownloadStatusText.Text = string.Format("Herunterladen... {0}%", progress);
+                        _codecDownloadStatusText.Text = string.Format("FFmpeg wird heruntergeladen... {0}%", progress);
                     });
                 },
                 (success, message) =>
                 {
                     _parentWindow.Dispatcher.InvokeAsync(() =>
                     {
-                        _btnDownloadCodec.IsEnabled = true;
-                        _btnDeleteCodec.IsEnabled = true;
-                        _codecDownloadProgress.Visibility = Visibility.Collapsed;
-                        _codecDownloadStatusText.Text = message;
-
+                        SetDownloadUiState(false, message);
                         if (success)
                         {
                             _codecDownloadStatusText.Foreground = new SolidColorBrush(Color.FromRgb(34, 197, 94));
-                            _codecSizeText.Text = "Installationsgröße: " + FormatBytes(CodecManager.GetCodecSize());
+                            _codecSizeText.Text = "Gesamtgröße im codecs-Ordner: " + FormatBytes(CodecManager.GetCodecSize());
                             UpdateCodecStatus();
                             MessageBox.Show(_codecWindow, message, "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
                         }
@@ -605,11 +718,112 @@ namespace ErAudioTool.UI
             );
         }
 
+        private void DownloadFluidSynth()
+        {
+            SetDownloadUiState(true, "FluidSynth Download wird vorbereitet...");
+
+            CodecManager.DownloadFluidSynth(
+                progress =>
+                {
+                    _parentWindow.Dispatcher.InvokeAsync(() =>
+                    {
+                        _codecDownloadProgress.Value = progress;
+                        _codecDownloadStatusText.Text = string.Format("FluidSynth wird heruntergeladen... {0}%", progress);
+                    });
+                },
+                (success, message) =>
+                {
+                    _parentWindow.Dispatcher.InvokeAsync(() =>
+                    {
+                        SetDownloadUiState(false, message);
+                        if (success)
+                        {
+                            _codecDownloadStatusText.Foreground = new SolidColorBrush(Color.FromRgb(34, 197, 94));
+                            if (_fsStatusLabel != null)
+                            {
+                                _fsStatusLabel.Text = "Status: ✓ Installiert (" + (CodecManager.GetFluidSynthPath() ?? "") + ")";
+                                _fsStatusLabel.Foreground = new SolidColorBrush(Color.FromRgb(34, 197, 94));
+                            }
+                            _codecSizeText.Text = "Gesamtgröße im codecs-Ordner: " + FormatBytes(CodecManager.GetCodecSize());
+                            UpdateCodecStatus();
+                            MessageBox.Show(_codecWindow, message, "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        else
+                        {
+                            _codecDownloadStatusText.Foreground = new SolidColorBrush(Color.FromRgb(239, 68, 68));
+                            MessageBox.Show(_codecWindow, message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                    });
+                }
+            );
+        }
+
+        private void DownloadSoundFont()
+        {
+            SetDownloadUiState(true, "SoundFont Download wird vorbereitet (~140 MB)...");
+
+            CodecManager.DownloadSoundFont(
+                progress =>
+                {
+                    _parentWindow.Dispatcher.InvokeAsync(() =>
+                    {
+                        _codecDownloadProgress.Value = progress;
+                        _codecDownloadStatusText.Text = string.Format("FluidR3 GM SoundFont wird geladen... {0}%", progress);
+                    });
+                },
+                (success, message) =>
+                {
+                    _parentWindow.Dispatcher.InvokeAsync(() =>
+                    {
+                        SetDownloadUiState(false, message);
+                        if (success)
+                        {
+                            _codecDownloadStatusText.Foreground = new SolidColorBrush(Color.FromRgb(34, 197, 94));
+                            if (_sfStatusLabel != null)
+                            {
+                                _sfStatusLabel.Text = "Status: ✓ Installiert (FluidR3_GM.sf2)";
+                                _sfStatusLabel.Foreground = new SolidColorBrush(Color.FromRgb(34, 197, 94));
+                            }
+                            _codecSizeText.Text = "Gesamtgröße im codecs-Ordner: " + FormatBytes(CodecManager.GetCodecSize());
+                            UpdateCodecStatus();
+                            MessageBox.Show(_codecWindow, message, "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        else
+                        {
+                            _codecDownloadStatusText.Foreground = new SolidColorBrush(Color.FromRgb(239, 68, 68));
+                            MessageBox.Show(_codecWindow, message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                    });
+                }
+            );
+        }
+
+        private void SetDownloadUiState(bool isDownloading, string status)
+        {
+            if (_btnDownloadCodec != null) _btnDownloadCodec.IsEnabled = !isDownloading;
+            if (_btnDownloadFluidSynth != null) _btnDownloadFluidSynth.IsEnabled = !isDownloading;
+            if (_btnDownloadSoundFont != null) _btnDownloadSoundFont.IsEnabled = !isDownloading;
+            if (_btnDeleteCodec != null) _btnDeleteCodec.IsEnabled = !isDownloading;
+
+            if (_codecDownloadProgress != null)
+            {
+                _codecDownloadProgress.Visibility = isDownloading ? Visibility.Visible : Visibility.Collapsed;
+                if (isDownloading) _codecDownloadProgress.Value = 0;
+            }
+
+            if (_codecDownloadStatusText != null)
+            {
+                _codecDownloadStatusText.Visibility = Visibility.Visible;
+                _codecDownloadStatusText.Text = status;
+                _codecDownloadStatusText.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+            }
+        }
+
         private void DeleteCodec()
         {
-            var result = MessageBox.Show(_codecWindow,
-                "Möchten Sie wirklich alle heruntergeladenen Codecs löschen?\nDies entfernt FFmpeg vollständig.",
-                "Codecs löschen",
+            var result = MessageBox.Show(_codecWindow ?? _parentWindow,
+                "Möchten Sie wirklich alle heruntergeladenen Komponenten (FFmpeg, FluidSynth, SoundFonts) löschen?",
+                "Komponenten löschen",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
@@ -617,13 +831,23 @@ namespace ErAudioTool.UI
             {
                 if (CodecManager.DeleteCodecs())
                 {
-                    _codecSizeText.Text = "Installationsgröße: 0 B";
+                    if (_codecSizeText != null) _codecSizeText.Text = "Gesamtgröße im codecs-Ordner: 0 B";
+                    if (_fsStatusLabel != null)
+                    {
+                        _fsStatusLabel.Text = "Status: ✗ Nicht installiert";
+                        _fsStatusLabel.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
+                    }
+                    if (_sfStatusLabel != null)
+                    {
+                        _sfStatusLabel.Text = "Status: ℹ Windows GM.DLS Fallback";
+                        _sfStatusLabel.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+                    }
                     UpdateCodecStatus();
-                    MessageBox.Show(_codecWindow, "Codecs wurden erfolgreich gelöscht.", "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show(_codecWindow ?? _parentWindow, "Alle Komponenten wurden erfolgreich gelöscht.", "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
                 {
-                    MessageBox.Show(_codecWindow, "Fehler beim Löschen der Codecs.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show(_codecWindow ?? _parentWindow, "Fehler beim Löschen der Komponenten.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -646,6 +870,7 @@ namespace ErAudioTool.UI
             if (dlg.ShowDialog() == true)
             {
                 _inputFileTextBox.Text = dlg.FileName;
+                AutoFillOutputFile();
             }
         }
 
@@ -718,7 +943,16 @@ namespace ErAudioTool.UI
 
             if (!CodecManager.IsFfmpegInstalled())
             {
-                MessageBox.Show(_parentWindow, "FFmpeg ist nicht installiert. Bitte installieren Sie FFmpeg über 'Codecs verwalten'.", "FFmpeg fehlt", MessageBoxButton.OK, MessageBoxImage.Warning);
+                var r = MessageBox.Show(_parentWindow,
+                    "FFmpeg ist noch nicht installiert!\n\n" +
+                    "Möchten Sie den Download-Manager öffnen, um FFmpeg automatisch zu installieren?",
+                    "FFmpeg fehlt",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (r == MessageBoxResult.Yes)
+                {
+                    ShowCodecManagementWindow();
+                }
                 return;
             }
 
@@ -730,21 +964,17 @@ namespace ErAudioTool.UI
             string ext = Path.GetExtension(inputFile).ToLowerInvariant();
             if (ext == ".mid" || ext == ".midi")
             {
-                // MIDI to Audio conversion with built-in synthesizer
-                var result = MessageBox.Show(_parentWindow,
-                    "MIDI-Datei erkannt!\n\n" +
-                    "MIDI wird mit dem integrierten Synthesizer in WAV konvertiert,\n" +
-                    "dann in das gewählte Format umgewandelt.\n\n" +
-                    "Hinweis: Verwendet einfache Sinuswellen-Synthese.\n" +
-                    "Für bessere Qualität verwenden Sie eine DAW mit hochwertigen Samples.\n\n" +
-                    "Fortfahren?",
-                    "MIDI zu Audio Konvertierung",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-
-                if (result != MessageBoxResult.Yes)
+                bool hasHq = CodecManager.IsHighQualityMidiAvailable();
+                if (!hasHq)
                 {
-                    return;
+                    // Offer HQ Download dialog
+                    bool shouldContinue = ShowMidiQualityDialog();
+                    if (!shouldContinue) return;
+                }
+                else
+                {
+                    string sf = Path.GetFileName(CodecManager.GetSoundFontPath());
+                    _logTextBox.AppendText(string.Format("[{0}] Verwende Studio-Synthesizer: FluidSynth + {1}\n", DateTime.Now.ToString("HH:mm:ss"), sf));
                 }
 
                 // Start MIDI conversion in background
@@ -823,34 +1053,34 @@ namespace ErAudioTool.UI
                                     _logTextBox.ScrollToEnd();
                                 });
                             },
-                            progress =>
+                            prog =>
                             {
                                 _parentWindow.Dispatcher.InvokeAsync(() =>
                                 {
-                                    _progressBar.Value = 50 + (progress / 2);
+                                    _progressBar.Value = 50 + (prog / 2);
                                 });
                             }
                         );
+
+                        try { if (File.Exists(tempWav)) File.Delete(tempWav); } catch { }
                     }
                     else
                     {
-                        // Just copy WAV to output
+                        // Target is WAV - just move/copy the temp file
                         try
                         {
-                            File.Copy(tempWav, outputFile, true);
+                            if (File.Exists(outputFile)) File.Delete(outputFile);
+                            File.Move(tempWav, outputFile);
                         }
                         catch (Exception ex)
                         {
+                            finalSuccess = false;
                             _parentWindow.Dispatcher.InvokeAsync(() =>
                             {
-                                _logTextBox.AppendText(string.Format("[{0}] Fehler beim Kopieren: {1}\n", DateTime.Now.ToString("HH:mm:ss"), ex.Message));
+                                _logTextBox.AppendText(string.Format("[{0}] Fehler beim Speichern: {1}\n", DateTime.Now.ToString("HH:mm:ss"), ex.Message));
                             });
-                            finalSuccess = false;
                         }
                     }
-
-                    // Cleanup temp file
-                    try { if (File.Exists(tempWav)) File.Delete(tempWav); } catch { }
 
                     _parentWindow.Dispatcher.InvokeAsync(() =>
                     {
@@ -861,24 +1091,27 @@ namespace ErAudioTool.UI
                         _formatComboBox.IsEnabled = true;
                         _bitrateComboBox.IsEnabled = true;
                         _sampleRateComboBox.IsEnabled = true;
-                        _progressBar.Value = 100;
 
                         if (finalSuccess)
                         {
-                            _logTextBox.AppendText(string.Format("[{0}] ✓ MIDI-Konvertierung erfolgreich abgeschlossen!\n", DateTime.Now.ToString("HH:mm:ss")));
+                            _progressBar.Value = 100;
+                            _logTextBox.AppendText(string.Format("[{0}] ✓ Konvertierung erfolgreich abgeschlossen!\n", DateTime.Now.ToString("HH:mm:ss")));
+                            _logTextBox.AppendText(string.Format("[{0}] Zieldatei: {1}\n", DateTime.Now.ToString("HH:mm:ss"), outputFile));
+
                             var msgResult = MessageBox.Show(_parentWindow,
-                                "MIDI-Konvertierung erfolgreich abgeschlossen!\n\nMöchten Sie die Datei im Explorer öffnen?",
+                                "Konvertierung erfolgreich abgeschlossen!\n\nMöchten Sie den Ordner im Explorer öffnen?",
                                 "Erfolg",
                                 MessageBoxButton.YesNo,
                                 MessageBoxImage.Information);
 
                             if (msgResult == MessageBoxResult.Yes)
                             {
-                                System.Diagnostics.Process.Start("explorer.exe", "/select, \"" + outputFile + "\"");
+                                OpenFolderAndSelectFile(outputFile);
                             }
                         }
                         else
                         {
+                            _progressBar.Value = 0;
                             _logTextBox.AppendText(string.Format("[{0}] ✗ Konvertierung fehlgeschlagen.\n", DateTime.Now.ToString("HH:mm:ss")));
                         }
                     });
@@ -887,6 +1120,7 @@ namespace ErAudioTool.UI
                 return;
             }
 
+            // Normal audio conversion (non-MIDI)
             _isConverting = true;
             _btnConvert.IsEnabled = false;
             _btnBrowseInput.IsEnabled = false;
@@ -896,6 +1130,9 @@ namespace ErAudioTool.UI
             _sampleRateComboBox.IsEnabled = false;
             _progressBar.Value = 0;
             _logTextBox.Clear();
+
+            _logTextBox.AppendText(string.Format("[{0}] Starte Konvertierung: {1} -> {2}\n",
+                DateTime.Now.ToString("HH:mm:ss"), Path.GetFileName(inputFile), Path.GetFileName(outputFile)));
 
             System.Threading.ThreadPool.QueueUserWorkItem(_ =>
             {
@@ -913,11 +1150,11 @@ namespace ErAudioTool.UI
                             _logTextBox.ScrollToEnd();
                         });
                     },
-                    progress =>
+                    prog =>
                     {
                         _parentWindow.Dispatcher.InvokeAsync(() =>
                         {
-                            _progressBar.Value = progress;
+                            _progressBar.Value = prog;
                         });
                     }
                 );
@@ -934,31 +1171,115 @@ namespace ErAudioTool.UI
 
                     if (success)
                     {
+                        _progressBar.Value = 100;
+                        _logTextBox.AppendText(string.Format("[{0}] ✓ Konvertierung erfolgreich abgeschlossen!\n", DateTime.Now.ToString("HH:mm:ss")));
+                        _logTextBox.AppendText(string.Format("[{0}] Zieldatei: {1}\n", DateTime.Now.ToString("HH:mm:ss"), outputFile));
+
                         var result = MessageBox.Show(_parentWindow,
-                            "Konvertierung erfolgreich abgeschlossen!\n\nMöchten Sie die Datei im Explorer öffnen?",
+                            "Konvertierung erfolgreich abgeschlossen!\n\nMöchten Sie den Ordner im Explorer öffnen?",
                             "Erfolg",
                             MessageBoxButton.YesNo,
                             MessageBoxImage.Information);
 
                         if (result == MessageBoxResult.Yes)
                         {
-                            System.Diagnostics.Process.Start("explorer.exe", "/select, \"" + outputFile + "\"");
+                            OpenFolderAndSelectFile(outputFile);
                         }
+                    }
+                    else
+                    {
+                        _progressBar.Value = 0;
+                        _logTextBox.AppendText(string.Format("[{0}] ✗ Konvertierung fehlgeschlagen.\n", DateTime.Now.ToString("HH:mm:ss")));
                     }
                 });
             });
+        }
+
+        private bool ShowMidiQualityDialog()
+        {
+            var win = new Window
+            {
+                Title = "MIDI zu Audio Konvertierung - Qualitätsoptionen",
+                Width = 540,
+                Height = 310,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = _parentWindow,
+                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                ResizeMode = ResizeMode.NoResize
+            };
+
+            bool proceed = false;
+
+            var stack = new StackPanel { Margin = new Thickness(22) };
+
+            var title = new TextBlock
+            {
+                Text = "🎵 MIDI-Datei erkannt",
+                FontSize = 16,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.White,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            stack.Children.Add(title);
+
+            var text = new TextBlock
+            {
+                Text = "Für erstklassigen Studio-Klang mit echten Instrumenten-Samples können Sie die kostenlosen Komponenten (FluidSynth Synthesizer + Orchester SoundFont) mit 1 Klick herunterladen.\n\nAlternativ kann die Konvertierung sofort mit dem integrierten Standard-Synthesizer fortgesetzt werden.",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 18),
+                LineHeight = 18
+            };
+            stack.Children.Add(text);
+
+            var btnStack = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+
+            var btnDownload = CreateStyledButton("📥 Bessere Qualität herunterladen...", Color.FromRgb(16, 185, 129), Color.FromRgb(5, 150, 105), 36);
+            btnDownload.FontWeight = FontWeights.Bold;
+            btnDownload.Margin = new Thickness(0, 0, 10, 0);
+            btnDownload.Click += (s, e) =>
+            {
+                win.Close();
+                ShowCodecManagementWindow();
+            };
+            btnStack.Children.Add(btnDownload);
+
+            var btnStandard = CreateStyledButton("Mit Standard fortfahren", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 36);
+            btnStandard.Margin = new Thickness(0, 0, 10, 0);
+            btnStandard.Click += (s, e) =>
+            {
+                proceed = true;
+                win.Close();
+            };
+            btnStack.Children.Add(btnStandard);
+
+            var btnCancel = CreateStyledButton("Abbrechen", Color.FromRgb(71, 85, 105), Color.FromRgb(100, 116, 139), 36);
+            btnCancel.Click += (s, e) =>
+            {
+                proceed = false;
+                win.Close();
+            };
+            btnStack.Children.Add(btnCancel);
+
+            stack.Children.Add(btnStack);
+            win.Content = stack;
+            win.ShowDialog();
+
+            return proceed;
         }
 
         private void AddBatchFiles()
         {
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
-                Filter = "Alle Audiodateien|*.wav;*.mp3;*.flac;*.ogg;*.aac;*.m4a;*.wma;*.opus;*.aiff|" +
+                Filter = "Alle Audiodateien|*.wav;*.mp3;*.flac;*.ogg;*.aac;*.m4a;*.wma;*.opus;*.aiff;*.mid;*.midi|" +
                          "WAV Dateien|*.wav|" +
                          "MP3 Dateien|*.mp3|" +
                          "FLAC Dateien|*.flac|" +
                          "OGG Dateien|*.ogg|" +
                          "AAC/M4A Dateien|*.aac;*.m4a|" +
+                         "MIDI Dateien|*.mid;*.midi|" +
                          "Alle Dateien (*.*)|*.*",
                 Title = "Dateien für Batch-Konvertierung auswählen",
                 Multiselect = true
@@ -969,46 +1290,21 @@ namespace ErAudioTool.UI
                 AudioFormat format = (AudioFormat)_formatComboBox.SelectedIndex;
                 string ext = AudioConverterService.GetFormatExtension(format);
 
-                int midiCount = 0;
                 foreach (string file in dlg.FileNames)
                 {
-                    string fileExt = Path.GetExtension(file).ToLowerInvariant();
-                    if (fileExt == ".mid" || fileExt == ".midi")
-                    {
-                        midiCount++;
-                        continue; // Skip MIDI files
-                    }
-
                     string dir = Path.GetDirectoryName(file);
                     string baseName = Path.GetFileNameWithoutExtension(file);
-                    string outputFile = Path.Combine(dir, baseName + "_converted" + ext);
+                    string outPath = Path.Combine(dir, baseName + "_converted" + ext);
 
                     var item = new BatchConversionItem
                     {
                         InputFile = file,
-                        OutputFile = outputFile,
-                        Status = "Wartend...",
+                        OutputFile = outPath,
+                        Status = "Bereit",
                         Progress = 0
                     };
-
                     _batchItems.Add(item);
-
-                    var itemText = new TextBlock
-                    {
-                        Text = string.Format("{0} → {1}", Path.GetFileName(file), Path.GetFileName(outputFile)),
-                        Foreground = Brushes.White,
-                        FontSize = 11
-                    };
-                    _batchListBox.Items.Add(itemText);
-                }
-
-                int addedCount = dlg.FileNames.Length - midiCount;
-                _logTextBox.AppendText(string.Format("[{0}] {1} Dateien zur Batch-Liste hinzugefügt.\n", DateTime.Now.ToString("HH:mm:ss"), addedCount));
-
-                if (midiCount > 0)
-                {
-                    _logTextBox.AppendText(string.Format("[{0}] Warnung: {1} MIDI-Datei(en) übersprungen (MIDI zu Audio nicht unterstützt).\n",
-                        DateTime.Now.ToString("HH:mm:ss"), midiCount));
+                    _batchListBox.Items.Add(Path.GetFileName(file) + " -> " + Path.GetFileName(outPath));
                 }
             }
         }
@@ -1017,7 +1313,6 @@ namespace ErAudioTool.UI
         {
             _batchItems.Clear();
             _batchListBox.Items.Clear();
-            _logTextBox.AppendText(string.Format("[{0}] Batch-Liste geleert.\n", DateTime.Now.ToString("HH:mm:ss")));
         }
 
         private void StartBatchConversion()
@@ -1030,74 +1325,100 @@ namespace ErAudioTool.UI
 
             if (!CodecManager.IsFfmpegInstalled())
             {
-                MessageBox.Show(_parentWindow, "FFmpeg ist nicht installiert. Bitte installieren Sie FFmpeg über 'Codecs verwalten'.", "FFmpeg fehlt", MessageBoxButton.OK, MessageBoxImage.Warning);
+                var r = MessageBox.Show(_parentWindow,
+                    "FFmpeg ist noch nicht installiert!\n\nMöchten Sie den Download-Manager öffnen, um FFmpeg herunterzuladen?",
+                    "FFmpeg fehlt",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (r == MessageBoxResult.Yes)
+                {
+                    ShowCodecManagementWindow();
+                }
                 return;
             }
-
-            _btnStartBatch.IsEnabled = false;
-            _btnAddFiles.IsEnabled = false;
-            _btnClearBatch.IsEnabled = false;
 
             AudioFormat format = (AudioFormat)_formatComboBox.SelectedIndex;
             int bitrate = GetSelectedBitrate();
             int sampleRate = GetSelectedSampleRate();
 
+            _isConverting = true;
+            _btnStartBatch.IsEnabled = false;
+            _btnAddFiles.IsEnabled = false;
+            _btnClearBatch.IsEnabled = false;
+            _progressBar.Value = 0;
+            _logTextBox.Clear();
+
+            _logTextBox.AppendText(string.Format("[{0}] Starte Batch-Konvertierung ({1} Dateien)...\n",
+                DateTime.Now.ToString("HH:mm:ss"), _batchItems.Count));
+
             System.Threading.ThreadPool.QueueUserWorkItem(_ =>
             {
-                int successCount = 0;
-                int failCount = 0;
+                int total = _batchItems.Count;
+                int successful = 0;
 
-                for (int i = 0; i < _batchItems.Count; i++)
+                for (int i = 0; i < total; i++)
                 {
                     var item = _batchItems[i];
                     int index = i;
 
                     _parentWindow.Dispatcher.InvokeAsync(() =>
                     {
-                        _logTextBox.AppendText(string.Format("\n[{0}] Konvertiere {1}/{2}: {3}\n",
-                            DateTime.Now.ToString("HH:mm:ss"), index + 1, _batchItems.Count, Path.GetFileName(item.InputFile)));
+                        _logTextBox.AppendText(string.Format("[{0}] [{1}/{2}] Konvertiere: {3}...\n",
+                            DateTime.Now.ToString("HH:mm:ss"), index + 1, total, Path.GetFileName(item.InputFile)));
                     });
 
-                    bool success = AudioConverterService.ConvertAudioAdvanced(
-                        item.InputFile,
-                        item.OutputFile,
-                        format,
-                        bitrate,
-                        sampleRate,
-                        msg =>
-                        {
-                            _parentWindow.Dispatcher.InvokeAsync(() =>
-                            {
-                                _logTextBox.AppendText(string.Format("  {0}\n", msg));
-                                _logTextBox.ScrollToEnd();
-                            });
-                        },
-                        progress =>
-                        {
-                            _parentWindow.Dispatcher.InvokeAsync(() =>
-                            {
-                                _progressBar.Value = progress;
-                            });
-                        }
-                    );
+                    string inExt = Path.GetExtension(item.InputFile).ToLowerInvariant();
+                    bool success = false;
 
-                    if (success) successCount++;
-                    else failCount++;
+                    if (inExt == ".mid" || inExt == ".midi")
+                    {
+                        string tempWav = Path.Combine(Path.GetTempPath(), "batch_midi_" + Guid.NewGuid() + ".wav");
+                        bool synthOk = MidiSynthesizer.ConvertMidiToWav(item.InputFile, tempWav, null);
+
+                        if (synthOk)
+                        {
+                            if (format == AudioFormat.WAV)
+                            {
+                                try
+                                {
+                                    if (File.Exists(item.OutputFile)) File.Delete(item.OutputFile);
+                                    File.Move(tempWav, item.OutputFile);
+                                    success = true;
+                                }
+                                catch { }
+                            }
+                            else
+                            {
+                                success = AudioConverterService.ConvertAudioAdvanced(tempWav, item.OutputFile, format, bitrate, sampleRate, null, null);
+                                try { if (File.Exists(tempWav)) File.Delete(tempWav); } catch { }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        success = AudioConverterService.ConvertAudioAdvanced(item.InputFile, item.OutputFile, format, bitrate, sampleRate, null, null);
+                    }
+
+                    if (success) successful++;
+
+                    _parentWindow.Dispatcher.InvokeAsync(() =>
+                    {
+                        _progressBar.Value = (int)(((index + 1) / (double)total) * 100);
+                    });
                 }
 
                 _parentWindow.Dispatcher.InvokeAsync(() =>
                 {
+                    _isConverting = false;
                     _btnStartBatch.IsEnabled = true;
                     _btnAddFiles.IsEnabled = true;
                     _btnClearBatch.IsEnabled = true;
-                    _progressBar.Value = 0;
 
-                    _logTextBox.AppendText(string.Format("\n[{0}] === Batch-Konvertierung abgeschlossen ===\n", DateTime.Now.ToString("HH:mm:ss")));
-                    _logTextBox.AppendText(string.Format("✓ Erfolgreich: {0}\n", successCount));
-                    _logTextBox.AppendText(string.Format("✗ Fehlgeschlagen: {0}\n", failCount));
+                    _logTextBox.AppendText(string.Format("[{0}] ✓ Batch-Konvertierung abgeschlossen! {1}/{2} erfolgreich.\n",
+                        DateTime.Now.ToString("HH:mm:ss"), successful, total));
 
                     MessageBox.Show(_parentWindow,
-                        string.Format("Batch-Konvertierung abgeschlossen!\n\nErfolgreich: {0}\nFehlgeschlagen: {1}", successCount, failCount),
+                        string.Format("Batch-Konvertierung abgeschlossen!\n\n{0} von {1} Dateien erfolgreich konvertiert.", successful, total),
                         "Batch abgeschlossen",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
@@ -1121,51 +1442,69 @@ namespace ErAudioTool.UI
         {
             switch (_sampleRateComboBox.SelectedIndex)
             {
-                case 0: return 0; // Original
                 case 1: return 44100;
                 case 2: return 48000;
                 case 3: return 96000;
-                default: return 0;
+                default: return 0; // 0 = Keep original
             }
         }
 
-        private string FormatBytes(long bytes)
+        private void OpenFolderAndSelectFile(string filePath)
         {
-            if (bytes == 0) return "0 B";
-            if (bytes < 1024) return bytes + " B";
-            if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("0.0") + " KB";
-            return (bytes / (1024.0 * 1024.0)).ToString("0.0") + " MB";
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    string argument = "/select, \"" + filePath + "\"";
+                    System.Diagnostics.Process.Start("explorer.exe", argument);
+                }
+                else
+                {
+                    string dir = Path.GetDirectoryName(filePath);
+                    if (Directory.Exists(dir))
+                    {
+                        System.Diagnostics.Process.Start("explorer.exe", dir);
+                    }
+                }
+            }
+            catch { }
         }
 
-        private Border CreateCard(string headerTitle, UIElement content)
+        private static string FormatBytes(long bytes)
         {
-            var cardBorder = new Border
+            if (bytes < 1024) return bytes + " B";
+            if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("F1") + " KB";
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024.0 * 1024.0)).ToString("F1") + " MB";
+            return (bytes / (1024.0 * 1024.0 * 1024.0)).ToString("F2") + " GB";
+        }
+
+        private Border CreateCard(string headerText, UIElement content)
+        {
+            var card = new Border
             {
                 Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
                 BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(18, 14, 18, 16),
-                Margin = new Thickness(0, 0, 0, 14)
+                Padding = new Thickness(16),
+                Margin = new Thickness(0, 0, 0, 16)
             };
 
             var stack = new StackPanel();
-            var title = new TextBlock
+
+            var header = new TextBlock
             {
-                Text = headerTitle,
+                Text = headerText,
                 FontSize = 11,
                 FontWeight = FontWeights.Bold,
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
                 Margin = new Thickness(0, 0, 0, 12)
             };
-            stack.Children.Add(title);
-            if (content != null)
-            {
-                stack.Children.Add(content);
-            }
+            stack.Children.Add(header);
+            stack.Children.Add(content);
 
-            cardBorder.Child = stack;
-            return cardBorder;
+            card.Child = stack;
+            return card;
         }
 
         private Button CreateStyledButton(string text, Color normalColor, Color hoverColor, double height, double width = 0)
@@ -1195,13 +1534,15 @@ namespace ErAudioTool.UI
 
             var triggerIsMouseOver = new Trigger { Property = Button.IsMouseOverProperty, Value = true };
             triggerIsMouseOver.Setters.Add(new Setter(Border.BackgroundProperty, new SolidColorBrush(hoverColor), "border"));
-
-            var triggerIsEnabled = new Trigger { Property = Button.IsEnabledProperty, Value = false };
-            triggerIsEnabled.Setters.Add(new Setter(Border.OpacityProperty, 0.4, "border"));
-
             template.Triggers.Add(triggerIsMouseOver);
-            template.Triggers.Add(triggerIsEnabled);
-            template.VisualTree = factory;
+
+            var triggerIsPressed = new Trigger { Property = Button.IsPressedProperty, Value = true };
+            triggerIsPressed.Setters.Add(new Setter(Border.BackgroundProperty, new SolidColorBrush(Color.FromRgb(15, 23, 42)), "border"));
+            template.Triggers.Add(triggerIsPressed);
+
+            var triggerDisabled = new Trigger { Property = Button.IsEnabledProperty, Value = false };
+            triggerDisabled.Setters.Add(new Setter(Border.OpacityProperty, 0.4, "border"));
+            template.Triggers.Add(triggerDisabled);
 
             btn.Template = template;
             return btn;

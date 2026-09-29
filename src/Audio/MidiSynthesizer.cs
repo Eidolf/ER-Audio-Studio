@@ -1,10 +1,12 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace ErAudioTool.Audio
 {
-    // Simple MIDI to Audio Synthesizer
-    // Converts MIDI notes to WAV audio using basic sine wave synthesis
+    // MIDI to Audio Synthesizer
+    // Supports High-Quality SoundFont synthesis via FluidSynth (with .sf2 or Windows gm.dls)
+    // and falls back to built-in algorithmic sine/harmonic synthesis.
     public static class MidiSynthesizer
     {
         public static bool ConvertMidiToWav(string midiFile, string wavFile, Action<string> onLog)
@@ -15,11 +17,32 @@ namespace ErAudioTool.Audio
                 return false;
             }
 
+            // 1. Try High-Quality FluidSynth if available
+            if (CodecManager.IsFluidSynthInstalled() && CodecManager.HasSoundFont())
+            {
+                string fsExe = CodecManager.GetFluidSynthPath();
+                string soundFont = CodecManager.GetSoundFontPath();
+
+                if (onLog != null)
+                {
+                    string sfName = Path.GetFileName(soundFont);
+                    onLog("Studio-Synthesizer aktiviert: FluidSynth + " + sfName);
+                }
+
+                if (ConvertWithFluidSynth(fsExe, soundFont, midiFile, wavFile, onLog))
+                {
+                    if (onLog != null) onLog("✓ High-Quality MIDI-Synthese erfolgreich abgeschlossen!");
+                    return true;
+                }
+
+                if (onLog != null) onLog("FluidSynth-Synthese fehlgeschlagen, wechsle zu internem Synthesizer...");
+            }
+
+            // 2. Built-in algorithmic fallback synthesis
             try
             {
                 if (onLog != null) onLog("Lese MIDI-Datei: " + Path.GetFileName(midiFile));
 
-                // Parse MIDI file
                 var midiData = ParseMidiFile(midiFile);
                 if (midiData == null || midiData.Notes.Count == 0)
                 {
@@ -28,16 +51,14 @@ namespace ErAudioTool.Audio
                 }
 
                 if (onLog != null) onLog(string.Format("Gefunden: {0} Noten, Tempo: {1} BPM", midiData.Notes.Count, midiData.TempoBpm));
+                if (onLog != null) onLog("Synthese läuft... (Integrierter Standard-Synthesizer)");
 
-                // Synthesize audio
-                if (onLog != null) onLog("Synthese läuft... (Einfacher Sinuswellen-Synthesizer)");
                 var audioData = SynthesizeAudio(midiData, onLog);
 
-                // Write WAV file
                 if (onLog != null) onLog("Schreibe WAV-Datei: " + Path.GetFileName(wavFile));
                 WavWriter.WriteWav(wavFile, audioData, 44100, 2, WavOutputFormat.Pcm16);
 
-                if (onLog != null) onLog("✓ MIDI zu WAV Konvertierung erfolgreich!");
+                if (onLog != null) onLog("✓ Standard MIDI zu WAV Konvertierung erfolgreich!");
                 return true;
             }
             catch (Exception ex)
@@ -47,6 +68,70 @@ namespace ErAudioTool.Audio
             }
         }
 
+        private static bool ConvertWithFluidSynth(string fsExe, string soundFont, string midiFile, string wavFile, Action<string> onLog)
+        {
+            try
+            {
+                if (File.Exists(wavFile))
+                {
+                    try { File.Delete(wavFile); } catch { }
+                }
+
+                // fluidsynth -F "out.wav" -r 44100 "soundfont.sf2" "input.mid"
+                var psi = new ProcessStartInfo
+                {
+                    FileName = fsExe,
+                    Arguments = string.Format("-ni -F \"{0}\" -r 44100 \"{1}\" \"{2}\"", wavFile, soundFont, midiFile),
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using (var process = new Process())
+                {
+                    process.StartInfo = psi;
+                    process.OutputDataReceived += (s, e) =>
+                    {
+                        if (!string.IsNullOrEmpty(e.Data) && onLog != null)
+                        {
+                            if (!e.Data.Contains("Rendering audio") && !e.Data.Contains("Copyright"))
+                            {
+                                onLog("FluidSynth: " + e.Data);
+                            }
+                        }
+                    };
+                    process.ErrorDataReceived += (s, e) =>
+                    {
+                        if (!string.IsNullOrEmpty(e.Data) && onLog != null)
+                        {
+                            // Filter out harmless non-fatal warnings
+                            if (!e.Data.Contains("warning: Ignoring unknown"))
+                            {
+                                onLog("FluidSynth: " + e.Data);
+                            }
+                        }
+                    };
+
+                    process.Start();
+                    process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
+                    process.WaitForExit(120000); // 2 minute timeout
+
+                    if (File.Exists(wavFile) && new FileInfo(wavFile).Length > 1000)
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (onLog != null) onLog("FluidSynth Ausführungsfehler: " + ex.Message);
+            }
+
+            return false;
+        }
+
         private static MidiData ParseMidiFile(string midiFile)
         {
             try
@@ -54,16 +139,13 @@ namespace ErAudioTool.Audio
                 byte[] bytes = File.ReadAllBytes(midiFile);
                 var midi = new MidiData();
 
-                // Simple MIDI parser - reads basic format
                 int pos = 0;
-
-                // Check header "MThd"
                 if (bytes.Length < 14 || bytes[0] != 0x4D || bytes[1] != 0x54 || bytes[2] != 0x68 || bytes[3] != 0x64)
                 {
-                    return null; // Not a valid MIDI file
+                    return null;
                 }
 
-                pos = 8; // Skip header chunk
+                pos = 8;
                 int format = (bytes[pos] << 8) | bytes[pos + 1];
                 int tracks = (bytes[pos + 2] << 8) | bytes[pos + 3];
                 int division = (bytes[pos + 4] << 8) | bytes[pos + 5];
@@ -71,10 +153,8 @@ namespace ErAudioTool.Audio
 
                 midi.TicksPerQuarterNote = division;
 
-                // Parse tracks
                 while (pos < bytes.Length - 8)
                 {
-                    // Check for track header "MTrk"
                     if (bytes[pos] == 0x4D && bytes[pos + 1] == 0x54 && bytes[pos + 2] == 0x72 && bytes[pos + 3] == 0x6B)
                     {
                         pos += 4;
@@ -107,15 +187,12 @@ namespace ErAudioTool.Audio
 
             while (pos < end)
             {
-                // Read delta time (variable length)
                 int deltaTime = ReadVarLen(bytes, ref pos);
                 currentTick += deltaTime;
 
                 if (pos >= end) break;
 
                 byte statusByte = bytes[pos];
-
-                // Running status
                 if ((statusByte & 0x80) == 0)
                 {
                     statusByte = lastStatus;
@@ -149,7 +226,6 @@ namespace ErAudioTool.Audio
                     }
                     else
                     {
-                        // Velocity 0 = Note Off
                         midi.Notes.Add(new MidiNote
                         {
                             Tick = currentTick,
@@ -176,33 +252,18 @@ namespace ErAudioTool.Audio
                         IsNoteOn = false
                     });
                 }
-                else if (eventType == 0xB0) // Control Change
-                {
-                    pos += 2;
-                }
-                else if (eventType == 0xC0) // Program Change
-                {
-                    pos += 1;
-                }
-                else if (eventType == 0xD0) // Channel Pressure
-                {
-                    pos += 1;
-                }
-                else if (eventType == 0xE0) // Pitch Bend
-                {
-                    pos += 2;
-                }
-                else if (eventType == 0xA0) // Polyphonic Aftertouch
-                {
-                    pos += 2;
-                }
+                else if (eventType == 0xB0) { pos += 2; }
+                else if (eventType == 0xC0) { pos += 1; }
+                else if (eventType == 0xD0) { pos += 1; }
+                else if (eventType == 0xE0) { pos += 2; }
+                else if (eventType == 0xA0) { pos += 2; }
                 else if (statusByte == 0xFF) // Meta Event
                 {
                     if (pos >= end) break;
                     int metaType = bytes[pos++];
                     int length = ReadVarLen(bytes, ref pos);
 
-                    if (metaType == 0x51 && length == 3) // Set Tempo
+                    if (metaType == 0x51 && length == 3)
                     {
                         int microsecondsPerQuarter = (bytes[pos] << 16) | (bytes[pos + 1] << 8) | bytes[pos + 2];
                         midi.TempoBpm = (int)(60000000.0 / microsecondsPerQuarter);
@@ -210,14 +271,13 @@ namespace ErAudioTool.Audio
 
                     pos += length;
                 }
-                else if (statusByte == 0xF0 || statusByte == 0xF7) // SysEx
+                else if (statusByte == 0xF0 || statusByte == 0xF7)
                 {
                     int length = ReadVarLen(bytes, ref pos);
                     pos += length;
                 }
                 else
                 {
-                    // Unknown event, try to skip
                     break;
                 }
             }
@@ -241,27 +301,21 @@ namespace ErAudioTool.Audio
             const int sampleRate = 44100;
             double secondsPerTick = (60.0 / midi.TempoBpm) / midi.TicksPerQuarterNote;
 
-            // Calculate total duration
             int maxTick = 0;
             foreach (var note in midi.Notes)
             {
                 if (note.Tick > maxTick) maxTick = note.Tick;
             }
 
-            double totalSeconds = maxTick * secondsPerTick + 2.0; // +2 sec for reverb tail
-            int totalSamples = (int)(totalSeconds * sampleRate) * 2; // Stereo
+            double totalSeconds = maxTick * secondsPerTick + 2.0;
+            int totalSamples = (int)(totalSeconds * sampleRate) * 2;
 
             float[] audioData = new float[totalSamples];
-
-            // Track active notes per channel
             var activeNotes = new System.Collections.Generic.Dictionary<int, MidiNote>();
-
-            // Sort notes by tick
             midi.Notes.Sort((a, b) => a.Tick.CompareTo(b.Tick));
 
             int lastReportedPercent = 0;
 
-            // Render each note
             for (int i = 0; i < midi.Notes.Count; i++)
             {
                 var note = midi.Notes[i];
@@ -273,7 +327,6 @@ namespace ErAudioTool.Audio
                 }
                 else
                 {
-                    // Note Off - render the note
                     if (activeNotes.ContainsKey(noteKey))
                     {
                         var noteOn = activeNotes[noteKey];
@@ -283,12 +336,10 @@ namespace ErAudioTool.Audio
                         double duration = (endTick - startTick) * secondsPerTick;
 
                         RenderNote(audioData, sampleRate, noteOn.NoteNumber, noteOn.Velocity, startTime, duration);
-
                         activeNotes.Remove(noteKey);
                     }
                 }
 
-                // Progress reporting
                 int percent = (i * 100) / midi.Notes.Count;
                 if (percent > lastReportedPercent && percent % 20 == 0)
                 {
@@ -297,12 +348,11 @@ namespace ErAudioTool.Audio
                 }
             }
 
-            // Render any remaining active notes (no explicit note-off)
             foreach (var kvp in activeNotes)
             {
                 var noteOn = kvp.Value;
                 double startTime = noteOn.Tick * secondsPerTick;
-                double duration = 0.5; // Default duration
+                double duration = 0.5;
                 RenderNote(audioData, sampleRate, noteOn.NoteNumber, noteOn.Velocity, startTime, duration);
             }
 
@@ -311,35 +361,31 @@ namespace ErAudioTool.Audio
 
         private static void RenderNote(float[] audioData, int sampleRate, int midiNote, int velocity, double startTime, double duration)
         {
-            // MIDI note to frequency: f = 440 * 2^((n-69)/12)
             double frequency = 440.0 * Math.Pow(2.0, (midiNote - 69) / 12.0);
 
             int startSample = (int)(startTime * sampleRate);
             int durationSamples = (int)(duration * sampleRate);
 
-            double amplitude = (velocity / 127.0) * 0.15; // Scale down to prevent clipping
+            double amplitude = (velocity / 127.0) * 0.15;
 
-            // ADSR envelope
-            int attackSamples = (int)(0.01 * sampleRate);  // 10ms attack
-            int decaySamples = (int)(0.05 * sampleRate);   // 50ms decay
+            int attackSamples = (int)(0.01 * sampleRate);
+            int decaySamples = (int)(0.05 * sampleRate);
             double sustainLevel = 0.7;
-            int releaseSamples = (int)(0.1 * sampleRate);  // 100ms release
+            int releaseSamples = (int)(0.1 * sampleRate);
 
             for (int i = 0; i < durationSamples + releaseSamples; i++)
             {
-                int sampleIndex = (startSample + i) * 2; // Stereo
+                int sampleIndex = (startSample + i) * 2;
                 if (sampleIndex >= audioData.Length - 1) break;
 
                 double t = i / (double)sampleRate;
                 double phase = 2.0 * Math.PI * frequency * t;
 
-                // Simple sine wave with harmonics
                 double sample = Math.Sin(phase);
-                sample += 0.3 * Math.Sin(2 * phase); // 2nd harmonic
-                sample += 0.1 * Math.Sin(3 * phase); // 3rd harmonic
-                sample /= 1.4; // Normalize
+                sample += 0.3 * Math.Sin(2 * phase);
+                sample += 0.1 * Math.Sin(3 * phase);
+                sample /= 1.4;
 
-                // Apply ADSR envelope
                 double envelope = 1.0;
                 if (i < attackSamples)
                 {
@@ -356,16 +402,13 @@ namespace ErAudioTool.Audio
                 }
                 else
                 {
-                    // Release
                     int releasePos = i - durationSamples;
                     envelope = sustainLevel * (1.0 - (double)releasePos / releaseSamples);
                 }
 
                 float value = (float)(sample * amplitude * envelope);
-
-                // Stereo - slightly different pan for richness
-                audioData[sampleIndex] += value * 0.9f;     // Left
-                audioData[sampleIndex + 1] += value * 1.1f; // Right (slightly louder)
+                audioData[sampleIndex] += value * 0.9f;
+                audioData[sampleIndex + 1] += value * 1.1f;
             }
         }
 
