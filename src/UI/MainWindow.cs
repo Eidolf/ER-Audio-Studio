@@ -79,12 +79,32 @@ namespace ErAudioTool.UI
         private Button _btnTabMidi;
         private Button _btnTabConvert;
         private Button _btnTabArrange;
+        private Button _btnTabEditor;
         private UIElement _recordTabContent;
         private UIElement _midiTabContent;
         private UIElement _converterTabContent;
         private UIElement _arrangeTabContent;
+        private UIElement _editorTabContent;
         private AudioPreAnalysis _lastPreAnalysis;
         private AudioConverterTab _converterTab;
+
+        // Audio Editor Controls
+        private AudioEditorEngine _editorEngine;
+        private TextBox _editorInputTextBox;
+        private WaveformControl _waveformControl;
+        private ListBox _segmentsListBox;
+        private TextBlock _editorStatusText;
+        private TextBlock _selectionInfoText;
+        private Button _btnEditorLoad;
+        private Button _btnEditorCut;
+        private Button _btnEditorSplit;
+        private Button _btnEditorDelete;
+        private Button _btnEditorCopy;
+        private Button _btnEditorPaste;
+        private Button _btnEditorMoveUp;
+        private Button _btnEditorMoveDown;
+        private Button _btnEditorExport;
+        private TextBox _editorLogTextBox;
 
         // Arrange & EQ Tab Controls
         private TextBox _arrangeInputTextBox;
@@ -116,6 +136,7 @@ namespace ErAudioTool.UI
         {
             _engine = new WasapiLoopbackEngine();
             _player = new SimpleAudioPlayer();
+            _editorEngine = new AudioEditorEngine();
 
             // Default output directory: recordings in workspace or user's Music/Recordings folder
             string defaultRecDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "recordings");
@@ -269,6 +290,12 @@ namespace ErAudioTool.UI
             _btnTabArrange.Opacity = 0.6;
             _btnTabArrange.Click += (s, e) => SwitchToArrangeTab();
             tabsStack.Children.Add(_btnTabArrange);
+
+            _btnTabEditor = CreateStyledButton("✂️ Audio-Editor", Color.FromRgb(168, 85, 247), Color.FromRgb(147, 51, 234), 34);
+            _btnTabEditor.Margin = new Thickness(8, 0, 0, 0);
+            _btnTabEditor.Opacity = 0.6;
+            _btnTabEditor.Click += (s, e) => SwitchToEditorTab();
+            tabsStack.Children.Add(_btnTabEditor);
 
             var headerRightStack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             headerRightStack.Children.Add(tabsStack);
@@ -1262,6 +1289,211 @@ namespace ErAudioTool.UI
 
             arrangeScrollViewer.Content = arrangeStack;
 
+            // --- TAB 5: AUDIO EDITOR CONTENT (SCROLLABLE) ---
+            var editorScrollViewer = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Padding = new Thickness(24, 16, 24, 16),
+                Visibility = Visibility.Collapsed
+            };
+            _editorTabContent = editorScrollViewer;
+            mainContentGrid.Children.Add(_editorTabContent);
+
+            var editorStack = new StackPanel();
+
+            // Card 1: File Selection & Waveform
+            var editorFileStack = new StackPanel();
+
+            var editorFileLabel = new TextBlock
+            {
+                Text = "Audiodatei laden:",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+            editorFileStack.Children.Add(editorFileLabel);
+
+            var editorFileGrid = new Grid();
+            editorFileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            editorFileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            _editorInputTextBox = new TextBox
+            {
+                Height = 32,
+                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Foreground = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                FontSize = 12,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(6, 0, 6, 0),
+                Margin = new Thickness(0, 0, 8, 0)
+            };
+            editorFileGrid.Children.Add(_editorInputTextBox);
+
+            _btnEditorLoad = CreateStyledButton("📁 Datei laden", Color.FromRgb(168, 85, 247), Color.FromRgb(147, 51, 234), 32);
+            _btnEditorLoad.Click += (s, e) => LoadEditorFile();
+            Grid.SetColumn(_btnEditorLoad, 1);
+            editorFileGrid.Children.Add(_btnEditorLoad);
+            editorFileStack.Children.Add(editorFileGrid);
+
+            // Status text
+            _editorStatusText = new TextBlock
+            {
+                Text = "Keine Datei geladen",
+                FontSize = 11,
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                Margin = new Thickness(0, 8, 0, 0)
+            };
+            editorFileStack.Children.Add(_editorStatusText);
+
+            editorStack.Children.Add(CreateCard("DATEI LADEN", editorFileStack));
+
+            // Card 2: Waveform Display
+            var waveformStack = new StackPanel();
+
+            _waveformControl = new WaveformControl
+            {
+                Height = 150,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            _waveformControl.SelectionChanged += OnWaveformSelectionChanged;
+            waveformStack.Children.Add(_waveformControl);
+
+            _selectionInfoText = new TextBlock
+            {
+                Text = "Keine Auswahl • Ziehen Sie mit der Maus über die Wellenform, um einen Bereich auszuwählen",
+                FontSize = 11,
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184))
+            };
+            waveformStack.Children.Add(_selectionInfoText);
+
+            editorStack.Children.Add(CreateCard("WELLENFORM-VORSCHAU", waveformStack));
+
+            // Card 3: Edit Tools
+            var toolsStack = new StackPanel();
+
+            var toolsLabel = new TextBlock
+            {
+                Text = "BEARBEITUNGS-WERKZEUGE:",
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            toolsStack.Children.Add(toolsLabel);
+
+            // Row 1: Cut, Split, Delete
+            var toolsRow1 = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
+
+            _btnEditorCut = CreateStyledButton("✂️ Ausschneiden", Color.FromRgb(239, 68, 68), Color.FromRgb(220, 38, 38), 36, 140);
+            _btnEditorCut.IsEnabled = false;
+            _btnEditorCut.Click += (s, e) => EditorCutSelection();
+            toolsRow1.Children.Add(_btnEditorCut);
+
+            _btnEditorSplit = CreateStyledButton("🔪 Teilen", Color.FromRgb(245, 158, 11), Color.FromRgb(217, 119, 6), 36, 140);
+            _btnEditorSplit.IsEnabled = false;
+            _btnEditorSplit.Margin = new Thickness(8, 0, 0, 0);
+            _btnEditorSplit.Click += (s, e) => EditorSplitSelection();
+            toolsRow1.Children.Add(_btnEditorSplit);
+
+            _btnEditorDelete = CreateStyledButton("🗑 Löschen", Color.FromRgb(220, 38, 38), Color.FromRgb(185, 28, 28), 36, 140);
+            _btnEditorDelete.IsEnabled = false;
+            _btnEditorDelete.Margin = new Thickness(8, 0, 0, 0);
+            _btnEditorDelete.Click += (s, e) => EditorDeleteSegment();
+            toolsRow1.Children.Add(_btnEditorDelete);
+
+            toolsStack.Children.Add(toolsRow1);
+
+            // Row 2: Copy, Paste
+            var toolsRow2 = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
+
+            _btnEditorCopy = CreateStyledButton("📋 Kopieren", Color.FromRgb(34, 197, 94), Color.FromRgb(22, 163, 74), 36, 140);
+            _btnEditorCopy.IsEnabled = false;
+            _btnEditorCopy.Click += (s, e) => EditorCopySegment();
+            toolsRow2.Children.Add(_btnEditorCopy);
+
+            _btnEditorPaste = CreateStyledButton("📄 Einfügen", Color.FromRgb(59, 130, 246), Color.FromRgb(37, 99, 235), 36, 140);
+            _btnEditorPaste.IsEnabled = false;
+            _btnEditorPaste.Margin = new Thickness(8, 0, 0, 0);
+            _btnEditorPaste.Click += (s, e) => EditorPasteSegment();
+            toolsRow2.Children.Add(_btnEditorPaste);
+
+            toolsStack.Children.Add(toolsRow2);
+
+            // Row 3: Move Up, Move Down
+            var toolsRow3 = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 0) };
+
+            _btnEditorMoveUp = CreateStyledButton("⬆️ Nach oben", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 36, 140);
+            _btnEditorMoveUp.IsEnabled = false;
+            _btnEditorMoveUp.Click += (s, e) => EditorMoveSegmentUp();
+            toolsRow3.Children.Add(_btnEditorMoveUp);
+
+            _btnEditorMoveDown = CreateStyledButton("⬇️ Nach unten", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 36, 140);
+            _btnEditorMoveDown.IsEnabled = false;
+            _btnEditorMoveDown.Margin = new Thickness(8, 0, 0, 0);
+            _btnEditorMoveDown.Click += (s, e) => EditorMoveSegmentDown();
+            toolsRow3.Children.Add(_btnEditorMoveDown);
+
+            toolsStack.Children.Add(toolsRow3);
+
+            editorStack.Children.Add(CreateCard("WERKZEUGE", toolsStack));
+
+            // Card 4: Segments List
+            var segmentsStack = new StackPanel();
+
+            var segmentsLabel = new TextBlock
+            {
+                Text = "Audio-Segmente (Reihenfolge der Wiedergabe):",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            segmentsStack.Children.Add(segmentsLabel);
+
+            _segmentsListBox = new ListBox
+            {
+                Height = 180,
+                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
+                Foreground = Brushes.White
+            };
+            _segmentsListBox.SelectionChanged += OnSegmentSelectionChanged;
+            segmentsStack.Children.Add(_segmentsListBox);
+
+            editorStack.Children.Add(CreateCard("SEGMENTE", segmentsStack));
+
+            // Card 5: Export
+            var exportStack = new StackPanel();
+
+            _btnEditorExport = CreateStyledButton("💾 Alle Segmente zusammenfügen und exportieren", Color.FromRgb(16, 185, 129), Color.FromRgb(5, 150, 105), 44, 380);
+            _btnEditorExport.FontWeight = FontWeights.Bold;
+            _btnEditorExport.FontSize = 13;
+            _btnEditorExport.IsEnabled = false;
+            _btnEditorExport.HorizontalAlignment = HorizontalAlignment.Center;
+            _btnEditorExport.Click += (s, e) => EditorExport();
+            exportStack.Children.Add(_btnEditorExport);
+
+            editorStack.Children.Add(exportStack);
+
+            // Card 6: Log
+            var editorLogStack = new StackPanel();
+            _editorLogTextBox = new TextBox
+            {
+                Height = 120,
+                IsReadOnly = true,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
+                FontFamily = new FontFamily("Consolas, Courier New"),
+                FontSize = 11,
+                Text = "Willkommen im Audio-Editor! Laden Sie eine Datei, um zu beginnen."
+            };
+            editorLogStack.Children.Add(_editorLogTextBox);
+            editorStack.Children.Add(CreateCard("PROTOKOLL", editorLogStack));
+
+            editorScrollViewer.Content = editorStack;
+
             // --- FOOTER ---
             var footerBorder = new Border
             {
@@ -1831,10 +2063,12 @@ namespace ErAudioTool.UI
                 _recordTabContent.Visibility = Visibility.Collapsed;
                 _converterTabContent.Visibility = Visibility.Collapsed;
                 _arrangeTabContent.Visibility = Visibility.Collapsed;
+                _editorTabContent.Visibility = Visibility.Collapsed;
                 _midiTabContent.Visibility = Visibility.Visible;
                 _btnTabRecord.Opacity = 0.6;
                 _btnTabConvert.Opacity = 0.6;
                 _btnTabArrange.Opacity = 0.6;
+                _btnTabEditor.Opacity = 0.6;
                 _btnTabMidi.Opacity = 1.0;
 
                 if (!string.IsNullOrEmpty(filePath))
@@ -1855,10 +2089,12 @@ namespace ErAudioTool.UI
                 _midiTabContent.Visibility = Visibility.Collapsed;
                 _converterTabContent.Visibility = Visibility.Collapsed;
                 _arrangeTabContent.Visibility = Visibility.Collapsed;
+                _editorTabContent.Visibility = Visibility.Collapsed;
                 _recordTabContent.Visibility = Visibility.Visible;
                 _btnTabMidi.Opacity = 0.6;
                 _btnTabConvert.Opacity = 0.6;
                 _btnTabArrange.Opacity = 0.6;
+                _btnTabEditor.Opacity = 0.6;
                 _btnTabRecord.Opacity = 1.0;
             }
         }
@@ -1870,10 +2106,12 @@ namespace ErAudioTool.UI
                 _recordTabContent.Visibility = Visibility.Collapsed;
                 _midiTabContent.Visibility = Visibility.Collapsed;
                 _arrangeTabContent.Visibility = Visibility.Collapsed;
+                _editorTabContent.Visibility = Visibility.Collapsed;
                 _converterTabContent.Visibility = Visibility.Visible;
                 _btnTabRecord.Opacity = 0.6;
                 _btnTabMidi.Opacity = 0.6;
                 _btnTabArrange.Opacity = 0.6;
+                _btnTabEditor.Opacity = 0.6;
                 _btnTabConvert.Opacity = 1.0;
             }
         }
@@ -1885,11 +2123,30 @@ namespace ErAudioTool.UI
                 _recordTabContent.Visibility = Visibility.Collapsed;
                 _midiTabContent.Visibility = Visibility.Collapsed;
                 _converterTabContent.Visibility = Visibility.Collapsed;
+                _editorTabContent.Visibility = Visibility.Collapsed;
                 _arrangeTabContent.Visibility = Visibility.Visible;
                 _btnTabRecord.Opacity = 0.6;
                 _btnTabMidi.Opacity = 0.6;
                 _btnTabConvert.Opacity = 0.6;
                 _btnTabArrange.Opacity = 1.0;
+                _btnTabEditor.Opacity = 0.6;
+            }
+        }
+
+        private void SwitchToEditorTab()
+        {
+            if (_editorTabContent != null)
+            {
+                _recordTabContent.Visibility = Visibility.Collapsed;
+                _midiTabContent.Visibility = Visibility.Collapsed;
+                _converterTabContent.Visibility = Visibility.Collapsed;
+                _arrangeTabContent.Visibility = Visibility.Collapsed;
+                _editorTabContent.Visibility = Visibility.Visible;
+                _btnTabRecord.Opacity = 0.6;
+                _btnTabMidi.Opacity = 0.6;
+                _btnTabConvert.Opacity = 0.6;
+                _btnTabArrange.Opacity = 0.6;
+                _btnTabEditor.Opacity = 1.0;
             }
         }
 
@@ -2327,6 +2584,356 @@ namespace ErAudioTool.UI
                     });
                 }
             });
+        }
+
+        // Audio Editor Methods
+        private void LoadEditorFile()
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Audiodateien (*.wav;*.mp3;*.ogg;*.flac;*.aac)|*.wav;*.mp3;*.ogg;*.flac;*.aac|WAV Dateien (*.wav)|*.wav|Alle Dateien (*.*)|*.*",
+                Title = "Audiodatei für Audio-Editor laden"
+            };
+
+            if (dlg.ShowDialog() == true)
+            {
+                _editorInputTextBox.Text = dlg.FileName;
+                _editorLogTextBox.Clear();
+                _editorLogTextBox.AppendText(string.Format("[{0}] Lade Datei...\n", DateTime.Now.ToString("HH:mm:ss")));
+
+                System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    var segment = _editorEngine.LoadAudioFile(dlg.FileName, msg =>
+                    {
+                        Dispatcher.InvokeAsync(() =>
+                        {
+                            _editorLogTextBox.AppendText(string.Format("[{0}] {1}\n", DateTime.Now.ToString("HH:mm:ss"), msg));
+                            _editorLogTextBox.ScrollToEnd();
+                        });
+                    });
+
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        if (segment != null)
+                        {
+                            _editorStatusText.Text = string.Format("Geladen: {0} • {1} Kanäle • {2} Hz • {3:0.2}s",
+                                segment.Name, segment.Channels, segment.SampleRate, segment.Duration);
+
+                            // Update waveform
+                            var waveformData = _editorEngine.GetWaveformData(segment, 800);
+                            _waveformControl.SetWaveformData(waveformData);
+
+                            RefreshSegmentsList();
+                            UpdateEditorButtons();
+                        }
+                        else
+                        {
+                            _editorStatusText.Text = "Fehler beim Laden der Datei";
+                        }
+                    });
+                });
+            }
+        }
+
+        private void RefreshSegmentsList()
+        {
+            _segmentsListBox.Items.Clear();
+
+            int index = 0;
+            foreach (var segment in _editorEngine.Segments)
+            {
+                var grid = new Grid { Margin = new Thickness(4, 6, 4, 6) };
+                grid.Tag = segment.Id;
+
+                var textBlock = new TextBlock
+                {
+                    Text = string.Format("{0}. {1} ({2:0.2}s)", index + 1, segment.Name, segment.Duration),
+                    FontSize = 12,
+                    Foreground = Brushes.White
+                };
+                grid.Children.Add(textBlock);
+
+                _segmentsListBox.Items.Add(grid);
+                index++;
+            }
+
+            _btnEditorExport.IsEnabled = _editorEngine.Segments.Count > 0;
+        }
+
+        private void OnSegmentSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateEditorButtons();
+
+            if (_segmentsListBox.SelectedItem != null)
+            {
+                Grid selectedGrid = _segmentsListBox.SelectedItem as Grid;
+                if (selectedGrid != null)
+                {
+                    string segmentId = selectedGrid.Tag as string;
+                    var segment = _editorEngine.Segments.FirstOrDefault(s => s.Id == segmentId);
+                    if (segment != null)
+                    {
+                        var waveformData = _editorEngine.GetWaveformData(segment, 800);
+                        _waveformControl.SetWaveformData(waveformData);
+                        _waveformControl.ClearSelection();
+                    }
+                }
+            }
+        }
+
+        private void OnWaveformSelectionChanged(object sender, WaveformSelectionEventArgs e)
+        {
+            if (_segmentsListBox.SelectedItem != null)
+            {
+                Grid selectedGrid = _segmentsListBox.SelectedItem as Grid;
+                if (selectedGrid != null)
+                {
+                    string segmentId = selectedGrid.Tag as string;
+                    var segment = _editorEngine.Segments.FirstOrDefault(s => s.Id == segmentId);
+                    if (segment != null)
+                    {
+                        double startTime = e.StartTime * segment.Duration;
+                        double endTime = e.EndTime * segment.Duration;
+                        _selectionInfoText.Text = string.Format("Auswahl: {0:0.3}s - {1:0.3}s (Länge: {2:0.3}s)",
+                            startTime, endTime, endTime - startTime);
+                    }
+                }
+            }
+
+            UpdateEditorButtons();
+        }
+
+        private void UpdateEditorButtons()
+        {
+            bool hasSegment = _segmentsListBox.SelectedItem != null;
+            bool hasSelection = _waveformControl.HasSelection;
+            bool hasClipboard = _editorEngine.HasClipboard;
+
+            _btnEditorCut.IsEnabled = hasSelection;
+            _btnEditorSplit.IsEnabled = hasSelection;
+            _btnEditorDelete.IsEnabled = hasSegment;
+            _btnEditorCopy.IsEnabled = hasSegment;
+            _btnEditorPaste.IsEnabled = hasClipboard;
+            _btnEditorMoveUp.IsEnabled = hasSegment && _segmentsListBox.SelectedIndex > 0;
+            _btnEditorMoveDown.IsEnabled = hasSegment && _segmentsListBox.SelectedIndex < _segmentsListBox.Items.Count - 1;
+        }
+
+        private void EditorCutSelection()
+        {
+            if (_segmentsListBox.SelectedItem == null || !_waveformControl.HasSelection) return;
+
+            Grid selectedGrid = _segmentsListBox.SelectedItem as Grid;
+            if (selectedGrid == null) return;
+
+            string segmentId = selectedGrid.Tag as string;
+            var segment = _editorEngine.Segments.FirstOrDefault(s => s.Id == segmentId);
+            if (segment == null) return;
+
+            double startTime = _waveformControl.SelectionStartTime * segment.Duration;
+            double endTime = _waveformControl.SelectionEndTime * segment.Duration;
+
+            var cutSegment = _editorEngine.CutSegment(segmentId, startTime, endTime, msg =>
+            {
+                Dispatcher.InvokeAsync(() =>
+                {
+                    _editorLogTextBox.AppendText(string.Format("[{0}] {1}\n", DateTime.Now.ToString("HH:mm:ss"), msg));
+                    _editorLogTextBox.ScrollToEnd();
+                });
+            });
+
+            if (cutSegment != null)
+            {
+                _editorEngine.Segments.Add(cutSegment);
+                _editorLogTextBox.AppendText(string.Format("[{0}] Ausgeschnittener Bereich als neues Segment hinzugefügt\n", DateTime.Now.ToString("HH:mm:ss")));
+                RefreshSegmentsList();
+                _waveformControl.ClearSelection();
+            }
+        }
+
+        private void EditorSplitSelection()
+        {
+            if (_segmentsListBox.SelectedItem == null || !_waveformControl.HasSelection) return;
+
+            Grid selectedGrid = _segmentsListBox.SelectedItem as Grid;
+            if (selectedGrid == null) return;
+
+            string segmentId = selectedGrid.Tag as string;
+            var segment = _editorEngine.Segments.FirstOrDefault(s => s.Id == segmentId);
+            if (segment == null) return;
+
+            double splitTime = _waveformControl.SelectionStartTime * segment.Duration;
+
+            _editorEngine.SplitSegment(segmentId, splitTime, msg =>
+            {
+                Dispatcher.InvokeAsync(() =>
+                {
+                    _editorLogTextBox.AppendText(string.Format("[{0}] {1}\n", DateTime.Now.ToString("HH:mm:ss"), msg));
+                    _editorLogTextBox.ScrollToEnd();
+                });
+            });
+
+            RefreshSegmentsList();
+            _waveformControl.ClearSelection();
+        }
+
+        private void EditorDeleteSegment()
+        {
+            if (_segmentsListBox.SelectedItem == null) return;
+
+            Grid selectedGrid = _segmentsListBox.SelectedItem as Grid;
+            if (selectedGrid == null) return;
+
+            string segmentId = selectedGrid.Tag as string;
+
+            var result = MessageBox.Show(this, "Möchten Sie dieses Segment wirklich löschen?",
+                "Segment löschen", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                _editorEngine.DeleteSegment(segmentId, msg =>
+                {
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        _editorLogTextBox.AppendText(string.Format("[{0}] {1}\n", DateTime.Now.ToString("HH:mm:ss"), msg));
+                        _editorLogTextBox.ScrollToEnd();
+                    });
+                });
+
+                RefreshSegmentsList();
+                _waveformControl.ClearSelection();
+            }
+        }
+
+        private void EditorCopySegment()
+        {
+            if (_segmentsListBox.SelectedItem == null) return;
+
+            Grid selectedGrid = _segmentsListBox.SelectedItem as Grid;
+            if (selectedGrid == null) return;
+
+            string segmentId = selectedGrid.Tag as string;
+
+            _editorEngine.CopyToClipboard(segmentId, msg =>
+            {
+                Dispatcher.InvokeAsync(() =>
+                {
+                    _editorLogTextBox.AppendText(string.Format("[{0}] {1}\n", DateTime.Now.ToString("HH:mm:ss"), msg));
+                    _editorLogTextBox.ScrollToEnd();
+                });
+            });
+
+            UpdateEditorButtons();
+        }
+
+        private void EditorPasteSegment()
+        {
+            int insertIndex = _segmentsListBox.SelectedIndex + 1;
+            if (_segmentsListBox.SelectedIndex < 0)
+            {
+                insertIndex = _editorEngine.Segments.Count;
+            }
+
+            _editorEngine.PasteFromClipboard(insertIndex, msg =>
+            {
+                Dispatcher.InvokeAsync(() =>
+                {
+                    _editorLogTextBox.AppendText(string.Format("[{0}] {1}\n", DateTime.Now.ToString("HH:mm:ss"), msg));
+                    _editorLogTextBox.ScrollToEnd();
+                });
+            });
+
+            RefreshSegmentsList();
+        }
+
+        private void EditorMoveSegmentUp()
+        {
+            if (_segmentsListBox.SelectedItem == null || _segmentsListBox.SelectedIndex <= 0) return;
+
+            Grid selectedGrid = _segmentsListBox.SelectedItem as Grid;
+            if (selectedGrid == null) return;
+
+            string segmentId = selectedGrid.Tag as string;
+            int newIndex = _segmentsListBox.SelectedIndex - 1;
+
+            _editorEngine.MoveSegment(segmentId, newIndex, msg =>
+            {
+                Dispatcher.InvokeAsync(() =>
+                {
+                    _editorLogTextBox.AppendText(string.Format("[{0}] {1}\n", DateTime.Now.ToString("HH:mm:ss"), msg));
+                    _editorLogTextBox.ScrollToEnd();
+                });
+            });
+
+            int prevSelected = _segmentsListBox.SelectedIndex;
+            RefreshSegmentsList();
+            _segmentsListBox.SelectedIndex = newIndex;
+        }
+
+        private void EditorMoveSegmentDown()
+        {
+            if (_segmentsListBox.SelectedItem == null || _segmentsListBox.SelectedIndex >= _segmentsListBox.Items.Count - 1) return;
+
+            Grid selectedGrid = _segmentsListBox.SelectedItem as Grid;
+            if (selectedGrid == null) return;
+
+            string segmentId = selectedGrid.Tag as string;
+            int newIndex = _segmentsListBox.SelectedIndex + 1;
+
+            _editorEngine.MoveSegment(segmentId, newIndex, msg =>
+            {
+                Dispatcher.InvokeAsync(() =>
+                {
+                    _editorLogTextBox.AppendText(string.Format("[{0}] {1}\n", DateTime.Now.ToString("HH:mm:ss"), msg));
+                    _editorLogTextBox.ScrollToEnd();
+                });
+            });
+
+            RefreshSegmentsList();
+            _segmentsListBox.SelectedIndex = newIndex;
+        }
+
+        private void EditorExport()
+        {
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "WAV Dateien (*.wav)|*.wav|Alle Dateien (*.*)|*.*",
+                Title = "Exportierte Audiodatei speichern",
+                FileName = "edited_audio.wav"
+            };
+
+            if (dlg.ShowDialog() == true)
+            {
+                _btnEditorExport.IsEnabled = false;
+                _editorLogTextBox.AppendText(string.Format("[{0}] Exportiere...\n", DateTime.Now.ToString("HH:mm:ss")));
+
+                System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    bool success = _editorEngine.ExportMerged(dlg.FileName, msg =>
+                    {
+                        Dispatcher.InvokeAsync(() =>
+                        {
+                            _editorLogTextBox.AppendText(string.Format("[{0}] {1}\n", DateTime.Now.ToString("HH:mm:ss"), msg));
+                            _editorLogTextBox.ScrollToEnd();
+                        });
+                    });
+
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        _btnEditorExport.IsEnabled = true;
+
+                        if (success)
+                        {
+                            MessageBox.Show(this, "Audio erfolgreich exportiert!\n\n" + dlg.FileName,
+                                "Export erfolgreich", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show(this, "Fehler beim Export.",
+                                "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                    });
+                });
+            }
         }
     }
 }
