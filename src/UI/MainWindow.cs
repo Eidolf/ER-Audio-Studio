@@ -2724,6 +2724,7 @@ namespace ErAudioTool.UI
                             // Update waveform
                             var waveformData = _editorEngine.GetWaveformData(segment, 800);
                             _waveformControl.SetWaveformData(waveformData);
+                            _waveformControl.SetDuration(segment.Duration);
 
                             RefreshSegmentsList();
                             UpdateEditorButtons();
@@ -2787,7 +2788,9 @@ namespace ErAudioTool.UI
                     {
                         var waveformData = _editorEngine.GetWaveformData(segment, 800);
                         _waveformControl.SetWaveformData(waveformData);
+                        _waveformControl.SetDuration(segment.Duration);
                         _waveformControl.ClearSelection();
+                        _waveformControl.StopPlaybackCursor();
                     }
                 }
             }
@@ -2896,9 +2899,9 @@ namespace ErAudioTool.UI
             _editorLogTextBox.AppendText(string.Format("[{0}] EditorSplitSelection aufgerufen\n", DateTime.Now.ToString("HH:mm:ss")));
             _editorLogTextBox.ScrollToEnd();
 
-            if (_segmentsListBox.SelectedItem == null || !_waveformControl.HasSelection)
+            if (_segmentsListBox.SelectedItem == null)
             {
-                _editorLogTextBox.AppendText(string.Format("[{0}] Kein Segment oder keine Auswahl\n", DateTime.Now.ToString("HH:mm:ss")));
+                _editorLogTextBox.AppendText(string.Format("[{0}] Kein Segment ausgewählt\n", DateTime.Now.ToString("HH:mm:ss")));
                 return;
             }
 
@@ -2917,7 +2920,18 @@ namespace ErAudioTool.UI
                 return;
             }
 
-            double splitTime = _waveformControl.SelectionStartTime * segment.Duration;
+            // Use selection start as split point (user just needs to click once)
+            double splitTime;
+            if (_waveformControl.HasSelection)
+            {
+                splitTime = _waveformControl.SelectionStartTime * segment.Duration;
+            }
+            else
+            {
+                // If no selection, ask user for position
+                _editorLogTextBox.AppendText(string.Format("[{0}] Keine Position markiert - bitte markieren Sie die Teilungsstelle\n", DateTime.Now.ToString("HH:mm:ss")));
+                return;
+            }
 
             _editorLogTextBox.AppendText(string.Format("[{0}] Teile bei {1:0.2}s\n",
                 DateTime.Now.ToString("HH:mm:ss"), splitTime));
@@ -3118,7 +3132,23 @@ namespace ErAudioTool.UI
                 return;
             }
 
-            _editorLogTextBox.AppendText(string.Format("[{0}] Erstelle Vorschau-Datei...\n", DateTime.Now.ToString("HH:mm:ss")));
+            // Check if there's a selection
+            int startSample = 0;
+            int endSample = segment.AudioData[0].Length;
+
+            if (_waveformControl.HasSelection)
+            {
+                startSample = (int)(_waveformControl.SelectionStartTime * segment.AudioData[0].Length);
+                endSample = (int)(_waveformControl.SelectionEndTime * segment.AudioData[0].Length);
+                _editorLogTextBox.AppendText(string.Format("[{0}] Spiele Auswahl ab: {1:0.2}s - {2:0.2}s\n",
+                    DateTime.Now.ToString("HH:mm:ss"),
+                    _waveformControl.SelectionStartTime * segment.Duration,
+                    _waveformControl.SelectionEndTime * segment.Duration));
+            }
+            else
+            {
+                _editorLogTextBox.AppendText(string.Format("[{0}] Spiele gesamtes Segment ab\n", DateTime.Now.ToString("HH:mm:ss")));
+            }
 
             // Create temporary WAV file to play
             string tempFile = Path.Combine(Path.GetTempPath(), "editor_preview_" + Guid.NewGuid().ToString() + ".wav");
@@ -3131,7 +3161,7 @@ namespace ErAudioTool.UI
                     using (var fs = File.Create(tempFile))
                     using (var bw = new BinaryWriter(fs))
                     {
-                        int sampleCount = segment.AudioData[0].Length;
+                        int sampleCount = endSample - startSample;
                         int dataSize = sampleCount * segment.Channels * 2;
                         int fileSize = 36 + dataSize;
 
@@ -3151,7 +3181,7 @@ namespace ErAudioTool.UI
                         bw.Write("data".ToCharArray());
                         bw.Write(dataSize);
 
-                        for (int i = 0; i < sampleCount; i++)
+                        for (int i = startSample; i < endSample; i++)
                         {
                             for (int ch = 0; ch < segment.Channels; ch++)
                             {
@@ -3167,6 +3197,17 @@ namespace ErAudioTool.UI
                         _player.Play(tempFile);
                         _btnEditorPlay.IsEnabled = false;
                         _btnEditorStop.IsEnabled = true;
+
+                        // Start playback cursor animation
+                        if (_waveformControl.HasSelection)
+                        {
+                            _waveformControl.StartPlaybackCursor(_waveformControl.SelectionStartTime);
+                        }
+                        else
+                        {
+                            _waveformControl.StartPlaybackCursor(0);
+                        }
+
                         _editorLogTextBox.AppendText(string.Format("[{0}] Wiedergabe gestartet: {1}\n", DateTime.Now.ToString("HH:mm:ss"), segment.Name));
                         _editorLogTextBox.ScrollToEnd();
                     });
@@ -3190,6 +3231,7 @@ namespace ErAudioTool.UI
                 {
                     _btnEditorPlay.IsEnabled = true;
                     _btnEditorStop.IsEnabled = false;
+                    _waveformControl.StopPlaybackCursor();
                     _editorLogTextBox.AppendText(string.Format("[{0}] Wiedergabe beendet\n", DateTime.Now.ToString("HH:mm:ss")));
                     _editorLogTextBox.ScrollToEnd();
                     try { File.Delete(tempFile); } catch { }
@@ -3204,6 +3246,7 @@ namespace ErAudioTool.UI
             _editorLogTextBox.ScrollToEnd();
 
             _player.Stop();
+            _waveformControl.StopPlaybackCursor();
             _btnEditorPlay.IsEnabled = true;
             _btnEditorStop.IsEnabled = false;
             _editorLogTextBox.AppendText(string.Format("[{0}] Wiedergabe gestoppt\n", DateTime.Now.ToString("HH:mm:ss")));
