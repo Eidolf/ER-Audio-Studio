@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -534,12 +534,15 @@ namespace ErAudioTool.Audio
             }
         }
 
-        private static string FindExternalMidiCli()
+        public static string FindExternalMidiCli()
         {
             string[] toolNames = { "basic-pitch", "basic-pitch.exe", "aubionotes", "aubionotes.exe" };
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string codecDir = Path.Combine(baseDir, "codecs");
+
             foreach (var tool in toolNames)
             {
+                string inCodecs = Path.Combine(codecDir, tool); if (File.Exists(inCodecs)) return inCodecs;
                 string local = Path.Combine(baseDir, tool); if (File.Exists(local)) return local;
                 string assets = Path.Combine(baseDir, "..", "assets", tool); if (File.Exists(assets)) return Path.GetFullPath(assets);
                 try { var p = Process.Start(new ProcessStartInfo { FileName = "where.exe", Arguments = tool, UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true }); string output = p.StandardOutput.ReadLine(); p.WaitForExit(); if (!string.IsNullOrEmpty(output) && File.Exists(output.Trim())) return output.Trim(); } catch { }

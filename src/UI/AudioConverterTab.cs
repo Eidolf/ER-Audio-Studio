@@ -489,7 +489,7 @@ namespace ErAudioTool.UI
             {
                 Title = "Downloads & Codec-Verwaltung - ER Audio Studio",
                 Width = 660,
-                Height = 580,
+                Height = 680,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Owner = _parentWindow,
                 Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
@@ -657,6 +657,55 @@ namespace ErAudioTool.UI
             sfStack.Children.Add(sfGrid);
             sfCard.Child = sfStack;
             mainStack.Children.Add(sfCard);
+
+            // 4. AI Pitch Detection Card (Basic-Pitch / Aubio)
+            var aiCard = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(14),
+                Margin = new Thickness(0, 0, 0, 14)
+            };
+            var aiStack = new StackPanel();
+            var aiGrid = new Grid();
+            aiGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            aiGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var aiInfo = new StackPanel();
+            var aiTitle = new TextBlock { Text = "4. KI Polyphonie-Erkennung (Basic-Pitch / Aubio)", FontSize = 13, FontWeight = FontWeights.Bold, Foreground = Brushes.White };
+            var aiDesc = new TextBlock { Text = "Neuronales Netzwerk fÃ¼r komplexe mehrstimmige Melodien (ohne CLI: nativer YIN-Algorithmus)", FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)), Margin = new Thickness(0, 2, 0, 0) };
+            
+            string currentCli = AudioToMidiConverter.FindExternalMidiCli();
+            var aiStatus = new TextBlock
+            {
+                Text = "Status: " + (!string.IsNullOrEmpty(currentCli) ? "âœ“ Aktiv (" + Path.GetFileName(currentCli) + ")" : "â„¹ Integrierter YIN-Algorithmus aktiv (Standard)"),
+                FontSize = 11,
+                Foreground = !string.IsNullOrEmpty(currentCli) ? new SolidColorBrush(Color.FromRgb(34, 197, 94)) : new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            aiInfo.Children.Add(aiTitle);
+            aiInfo.Children.Add(aiDesc);
+            aiInfo.Children.Add(aiStatus);
+            aiGrid.Children.Add(aiInfo);
+
+            var btnOpenCodecsFolder = CreateStyledButton("ðŸ“ codecs-Ordner", Color.FromRgb(51, 65, 85), Color.FromRgb(71, 85, 105), 32);
+            btnOpenCodecsFolder.ToolTip = "Ã–ffnet den codecs-Ordner fÃ¼r manuelle CLI-Dateien oder Erweiterungen";
+            btnOpenCodecsFolder.Click += (s, e) =>
+            {
+                try
+                {
+                    string cDir = CodecManager.GetCodecDirectory();
+                    System.Diagnostics.Process.Start("explorer.exe", cDir);
+                }
+                catch { }
+            };
+            Grid.SetColumn(btnOpenCodecsFolder, 1);
+            aiGrid.Children.Add(btnOpenCodecsFolder);
+            aiStack.Children.Add(aiGrid);
+            aiCard.Child = aiStack;
+            mainStack.Children.Add(aiCard);
 
             // Bottom bar: Size + Delete button
             var bottomGrid = new Grid();

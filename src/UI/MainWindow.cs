@@ -68,6 +68,8 @@ namespace ErAudioTool.UI
         private CheckBox _midiAddBassCheckBox;
         private CheckBox _midiAddChordsCheckBox;
         private CheckBox _midiUseCliCheckBox;
+        private Button _btnMidiDownloadCli;
+        private TextBlock _midiCliStatusText;
         private Button _btnConvertMidi;
         private TextBox _midiLogTextBox;
 
@@ -770,7 +772,24 @@ namespace ErAudioTool.UI
                 Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
                 Margin = new Thickness(0, 0, 0, 14)
             };
-            paramStack.Children.Add(_midiUseCliCheckBox);
+            // CLI Tool Option Checkbox & Download Button
+            var cliRowGrid = new Grid { Margin = new Thickness(0, 0, 0, 14) };
+            cliRowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            cliRowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var cliLeftStack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            _midiUseCliCheckBox.Margin = new Thickness(0);
+            cliLeftStack.Children.Add(_midiUseCliCheckBox);
+            _midiCliStatusText = new TextBlock { Text = "", FontSize = 11, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+            cliLeftStack.Children.Add(_midiCliStatusText);
+            cliRowGrid.Children.Add(cliLeftStack);
+            _btnMidiDownloadCli = CreateStyledButton("ðŸ“¥ KI / Codecs verwalten", Color.FromRgb(59, 130, 246), Color.FromRgb(37, 99, 235), 26);
+            _btnMidiDownloadCli.FontSize = 11;
+            _btnMidiDownloadCli.Padding = new Thickness(10, 0, 10, 0);
+            _btnMidiDownloadCli.Click += (s, e) => { if (_converterTab != null) { _converterTab.ShowCodecManagementWindow(); UpdateMidiCliStatusBadge(); } };
+            Grid.SetColumn(_btnMidiDownloadCli, 1);
+            cliRowGrid.Children.Add(_btnMidiDownloadCli);
+            paramStack.Children.Add(cliRowGrid);
+            UpdateMidiCliStatusBadge();
 
             // Convert Button
             _btnConvertMidi = CreateStyledButton("🎹  Multi-Instrument MIDI erstellen", Color.FromRgb(147, 51, 234), Color.FromRgb(126, 34, 206), 42, 290);
@@ -1410,6 +1429,25 @@ namespace ErAudioTool.UI
                     }
                 });
             });
+        }
+
+
+        private void UpdateMidiCliStatusBadge()
+        {
+            if (_midiCliStatusText == null) return;
+            string cli = AudioToMidiConverter.FindExternalMidiCli();
+            if (!string.IsNullOrEmpty(cli))
+            {
+                _midiCliStatusText.Text = "âœ“ Aktiv: " + Path.GetFileName(cli);
+                _midiCliStatusText.Foreground = new SolidColorBrush(Color.FromRgb(34, 197, 94));
+                if (_btnMidiDownloadCli != null) _btnMidiDownloadCli.Content = "âš™ï¸ Downloads & Codecs";
+            }
+            else
+            {
+                _midiCliStatusText.Text = "â„¹ Standard (YIN aktiv)";
+                _midiCliStatusText.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+                if (_btnMidiDownloadCli != null) _btnMidiDownloadCli.Content = "ðŸ“¥ KI / Codecs verwalten";
+            }
         }
 
         public void OpenInConverter(string filePath)
