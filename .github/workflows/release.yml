@@ -4,12 +4,6 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version (e.g. 0.1.0)'
-        required: false
-        default: '0.1.0'
 
 permissions:
   contents: write
@@ -24,19 +18,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine Version
+      - name: Determine Version from Tag
         id: get_version
         shell: pwsh
         run: |
-          $ver = ""
-          if ($env:GITHUB_REF -like "refs/tags/v*") {
-              $ver = $env:GITHUB_REF.Substring(11) # Strip 'refs/tags/v'
-          } elseif ('${{ github.event.inputs.version }}' -ne '') {
-              $ver = '${{ github.event.inputs.version }}'.TrimStart('v')
-          } else {
-              $ver = "0.1.0"
-          }
-          Write-Host "Resolved Version: $ver"
+          $tag = $env:GITHUB_REF_NAME
+          $ver = $tag.TrimStart('v')
+          Write-Host "Triggered by Tag: $tag -> Version: $ver"
           "version=$ver" >> $env:GITHUB_OUTPUT
 
       - name: Compile ER Audio Studio
@@ -65,7 +53,6 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           name: ER Audio Studio v${{ steps.get_version.outputs.version }}
           tag_name: ${{ github.ref_name }}
@@ -73,16 +60,6 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            bin/ErAudioStudio.exe
-            bin/ErAudioCli.exe
-            ER-Audio-Studio-v${{ steps.get_version.outputs.version }}-windows.zip
-
-      - name: Upload Artifacts (Workflow Dispatch)
-        uses: actions/upload-artifact@v4
-        if: "!startsWith(github.ref, 'refs/tags/')"
-        with:
-          name: ER-Audio-Studio-v${{ steps.get_version.outputs.version }}
-          path: |
             bin/ErAudioStudio.exe
             bin/ErAudioCli.exe
             ER-Audio-Studio-v${{ steps.get_version.outputs.version }}-windows.zip
