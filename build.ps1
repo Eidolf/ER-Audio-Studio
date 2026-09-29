@@ -46,6 +46,7 @@ $srcFiles = @(
     (Join-Path $PSScriptRoot "src\Audio\AudioToMidiConverter.cs"),
     (Join-Path $PSScriptRoot "src\UI\Localization.cs"),
     (Join-Path $PSScriptRoot "src\UI\VuMeterControl.cs"),
+    (Join-Path $PSScriptRoot "src\UI\DarkThemeStyles.cs"),
     (Join-Path $PSScriptRoot "src\UI\AudioConverterTab.cs"),
     (Join-Path $PSScriptRoot "src\UI\MainWindow.cs"),
     (Join-Path $PSScriptRoot "src\CLI\CommandLineRunner.cs")

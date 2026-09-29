@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Windows;
 using ErAudioTool.UI;
@@ -13,6 +13,7 @@ namespace ErAudioTool
             try
             {
                 var app = new App();
+                DarkThemeStyles.ApplyToApplication(app);
                 var window = new MainWindow();
                 return app.Run(window);
             }

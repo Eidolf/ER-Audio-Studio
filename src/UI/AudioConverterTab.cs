@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows;
@@ -228,13 +228,10 @@ namespace ErAudioTool.UI
             _formatComboBox = new ComboBox
             {
                 Height = 36,
-                Background = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
-                Foreground = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
-                FontSize = 13,
+                                Foreground = Brushes.White,
+                                FontSize = 13,
                 VerticalContentAlignment = VerticalAlignment.Center,
-                Padding = new Thickness(8, 4, 8, 4)
-            };
+                            };
 
             foreach (AudioFormat format in Enum.GetValues(typeof(AudioFormat)))
             {
@@ -260,13 +257,10 @@ namespace ErAudioTool.UI
             _bitrateComboBox = new ComboBox
             {
                 Height = 36,
-                Background = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
-                Foreground = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
-                FontSize = 13,
+                                Foreground = Brushes.White,
+                                FontSize = 13,
                 VerticalContentAlignment = VerticalAlignment.Center,
-                Padding = new Thickness(8, 4, 8, 4)
-            };
+                            };
             _bitrateComboBox.Items.Add("128 kbps");
             _bitrateComboBox.Items.Add("192 kbps");
             _bitrateComboBox.Items.Add("256 kbps");
@@ -290,13 +284,10 @@ namespace ErAudioTool.UI
             _sampleRateComboBox = new ComboBox
             {
                 Height = 36,
-                Background = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
-                Foreground = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
-                FontSize = 13,
+                                Foreground = Brushes.White,
+                                FontSize = 13,
                 VerticalContentAlignment = VerticalAlignment.Center,
-                Padding = new Thickness(8, 4, 8, 4)
-            };
+                            };
             _sampleRateComboBox.Items.Add("Original");
             _sampleRateComboBox.Items.Add("44100 Hz");
             _sampleRateComboBox.Items.Add("48000 Hz");

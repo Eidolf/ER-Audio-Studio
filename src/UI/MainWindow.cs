@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -271,10 +271,8 @@ namespace ErAudioTool.UI
             _deviceComboBox = new ComboBox
             {
                 Height = 36,
-                Background = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
-                Foreground = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
-                FontSize = 13,
+                                Foreground = Brushes.White,
+                                FontSize = 13,
                 VerticalContentAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 10, 0)
             };
@@ -466,10 +464,8 @@ namespace ErAudioTool.UI
             _formatComboBox = new ComboBox
             {
                 Height = 32,
-                Background = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
-                Foreground = Brushes.White,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
-                FontSize = 12,
+                                Foreground = Brushes.White,
+                                FontSize = 12,
                 VerticalContentAlignment = VerticalAlignment.Center
             };
             _formatComboBox.Items.Add("16-Bit PCM WAV (Universell kompatibel)");
