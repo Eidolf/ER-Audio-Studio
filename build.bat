@@ -1,6 +1,6 @@
 @echo off
-REM ER Audio Studio - Build & Start Script
-REM Kompiliert die Anwendung und startet die GUI
+REM ER Audio Studio - Build Script
+REM Kompiliert die Anwendung (GUI und CLI)
 
 echo ========================================
 echo ER Audio Studio - Build System
@@ -16,10 +16,10 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-REM Run build script
+REM Run build script without automatically opening the GUI
 echo Starte Kompilierung...
 echo.
-powershell.exe -ExecutionPolicy Bypass -File "%~dp0build.ps1" -RunGui
+powershell.exe -ExecutionPolicy Bypass -File "%~dp0build.ps1"
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
@@ -29,5 +29,5 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo.
-echo Build erfolgreich!
+echo Build erfolgreich abgeschlossen!
 echo.
