@@ -1231,6 +1231,14 @@ namespace ErAudioTool.UI
             };
             actionsStack.Children.Add(btnMidi);
 
+            var btnConvert = CreateStyledButton("🔄 Konverter", Color.FromRgb(34, 197, 94), Color.FromRgb(22, 163, 74), 28);
+            btnConvert.Margin = new Thickness(6, 0, 0, 0);
+            btnConvert.Click += (s, ev) =>
+            {
+                OpenInConverter(filePath);
+            };
+            actionsStack.Children.Add(btnConvert);
+
             Grid.SetColumn(actionsStack, 1);
             grid.Children.Add(actionsStack);
 
@@ -1397,6 +1405,7 @@ namespace ErAudioTool.UI
                                 _midiLogTextBox.AppendText(string.Format("  ... und {0} weitere Noten.\n", result.Notes.Count - showCount));
                             }
                         }
+                        _midiLogTextBox.AppendText("\n💡 Tipp: Sie können diese MIDI-Datei im Reiter '🔄 Konverter' mit dem integrierten Synthesizer in WAV/MP3 umwandeln.\n");
                     }
                     else
                     {
@@ -1405,6 +1414,15 @@ namespace ErAudioTool.UI
                     }
                 });
             });
+        }
+
+        public void OpenInConverter(string filePath)
+        {
+            SwitchToConverterTab();
+            if (_converterTab != null)
+            {
+                _converterTab.SetInputFile(filePath);
+            }
         }
 
 

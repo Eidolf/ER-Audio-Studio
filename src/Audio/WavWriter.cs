@@ -197,5 +197,17 @@ namespace ErAudioTool.Audio
             }
             catch { }
         }
+
+        public static void WriteWav(string filePath, float[] samples, int sampleRate, int channels, WavOutputFormat format)
+        {
+            if (string.IsNullOrEmpty(filePath)) throw new ArgumentNullException("filePath");
+            if (samples == null) throw new ArgumentNullException("samples");
+
+            using (var writer = new WavWriter(filePath, sampleRate, channels, format))
+            {
+                writer.WriteSamples(samples, samples.Length);
+                writer.FinalizeHeader();
+            }
+        }
     }
 }

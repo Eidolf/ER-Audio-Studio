@@ -658,6 +658,16 @@ namespace ErAudioTool.UI
             }
         }
 
+        public void SetInputFile(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath)) return;
+            if (_inputFileTextBox != null)
+            {
+                _inputFileTextBox.Text = filePath;
+                AutoFillOutputFile();
+            }
+        }
+
         private void BrowseOutputFile()
         {
             var dlg = new Microsoft.Win32.SaveFileDialog
