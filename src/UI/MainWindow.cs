@@ -96,6 +96,8 @@ namespace ErAudioTool.UI
         private TextBlock _editorStatusText;
         private TextBlock _selectionInfoText;
         private Button _btnEditorLoad;
+        private Button _btnEditorPlay;
+        private Button _btnEditorStop;
         private Button _btnEditorCut;
         private Button _btnEditorSplit;
         private Button _btnEditorDelete;
@@ -104,7 +106,12 @@ namespace ErAudioTool.UI
         private Button _btnEditorMoveUp;
         private Button _btnEditorMoveDown;
         private Button _btnEditorExport;
+        private Button _btnEditorZoomIn;
+        private Button _btnEditorZoomOut;
+        private Button _btnEditorZoomReset;
         private TextBox _editorLogTextBox;
+        private double _editorZoomLevel = 1.0;
+        private double _editorZoomOffset = 0.0;
 
         // Arrange & EQ Tab Controls
         private TextBox _arrangeInputTextBox;
@@ -1351,6 +1358,50 @@ namespace ErAudioTool.UI
             // Card 2: Waveform Display
             var waveformStack = new StackPanel();
 
+            // Playback and Zoom controls
+            var waveformControlsGrid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+            waveformControlsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            waveformControlsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var playbackStack = new StackPanel { Orientation = Orientation.Horizontal };
+
+            _btnEditorPlay = CreateStyledButton("▶ Abspielen", Color.FromRgb(16, 185, 129), Color.FromRgb(5, 150, 105), 32, 120);
+            _btnEditorPlay.IsEnabled = false;
+            _btnEditorPlay.Click += (s, e) => EditorPlaySegment();
+            playbackStack.Children.Add(_btnEditorPlay);
+
+            _btnEditorStop = CreateStyledButton("⏹ Stopp", Color.FromRgb(239, 68, 68), Color.FromRgb(220, 38, 38), 32, 100);
+            _btnEditorStop.IsEnabled = false;
+            _btnEditorStop.Margin = new Thickness(8, 0, 0, 0);
+            _btnEditorStop.Click += (s, e) => EditorStopPlayback();
+            playbackStack.Children.Add(_btnEditorStop);
+
+            waveformControlsGrid.Children.Add(playbackStack);
+
+            var zoomStack = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+
+            _btnEditorZoomOut = CreateStyledButton("🔍−", Color.FromRgb(71, 85, 105), Color.FromRgb(51, 65, 85), 32, 50);
+            _btnEditorZoomOut.IsEnabled = false;
+            _btnEditorZoomOut.Click += (s, e) => EditorZoomOut();
+            zoomStack.Children.Add(_btnEditorZoomOut);
+
+            _btnEditorZoomReset = CreateStyledButton("1:1", Color.FromRgb(71, 85, 105), Color.FromRgb(51, 65, 85), 32, 50);
+            _btnEditorZoomReset.IsEnabled = false;
+            _btnEditorZoomReset.Margin = new Thickness(4, 0, 0, 0);
+            _btnEditorZoomReset.Click += (s, e) => EditorZoomReset();
+            zoomStack.Children.Add(_btnEditorZoomReset);
+
+            _btnEditorZoomIn = CreateStyledButton("🔍+", Color.FromRgb(71, 85, 105), Color.FromRgb(51, 65, 85), 32, 50);
+            _btnEditorZoomIn.IsEnabled = false;
+            _btnEditorZoomIn.Margin = new Thickness(4, 0, 0, 0);
+            _btnEditorZoomIn.Click += (s, e) => EditorZoomIn();
+            zoomStack.Children.Add(_btnEditorZoomIn);
+
+            Grid.SetColumn(zoomStack, 1);
+            waveformControlsGrid.Children.Add(zoomStack);
+
+            waveformStack.Children.Add(waveformControlsGrid);
+
             _waveformControl = new WaveformControl
             {
                 Height = 150,
@@ -2050,10 +2101,61 @@ namespace ErAudioTool.UI
             };
             actionsStack.Children.Add(btnConvert);
 
+            var btnDelete = CreateStyledButton("🗑 Löschen", Color.FromRgb(220, 38, 38), Color.FromRgb(185, 28, 28), 28);
+            btnDelete.Margin = new Thickness(6, 0, 0, 0);
+            btnDelete.Click += (s, ev) =>
+            {
+                DeleteRecording(filePath, grid);
+            };
+            actionsStack.Children.Add(btnDelete);
+
             Grid.SetColumn(actionsStack, 1);
             grid.Children.Add(actionsStack);
 
             _historyListBox.Items.Insert(0, grid);
+        }
+
+        private void DeleteRecording(string filePath, Grid gridItem)
+        {
+            var result = MessageBox.Show(this,
+                string.Format("Möchten Sie die Aufnahme wirklich löschen?\n\n{0}", Path.GetFileName(filePath)),
+                "Aufnahme löschen",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    // Stop playback if this file is playing
+                    if (_player.IsPlaying && _player.CurrentFile == filePath)
+                    {
+                        _player.Stop();
+                    }
+
+                    // Delete file
+                    if (File.Exists(filePath))
+                    {
+                        File.Delete(filePath);
+                    }
+
+                    // Remove from UI
+                    _historyListBox.Items.Remove(gridItem);
+
+                    // Remove from list
+                    var itemToRemove = _recordingsList.FirstOrDefault(r => r.FilePath == filePath);
+                    if (itemToRemove != null)
+                    {
+                        _recordingsList.Remove(itemToRemove);
+                    }
+
+                    MessageBox.Show(this, "Aufnahme erfolgreich gelöscht.", "Gelöscht", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "Fehler beim Löschen der Datei:\n\n" + ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
 
         private void SwitchToMidiTab(string filePath = null)
@@ -2708,14 +2810,20 @@ namespace ErAudioTool.UI
             bool hasSegment = _segmentsListBox.SelectedItem != null;
             bool hasSelection = _waveformControl.HasSelection;
             bool hasClipboard = _editorEngine.HasClipboard;
+            bool hasSegments = _editorEngine.Segments.Count > 0;
 
-            _btnEditorCut.IsEnabled = hasSelection;
-            _btnEditorSplit.IsEnabled = hasSelection;
+            _btnEditorCut.IsEnabled = hasSelection && hasSegment;
+            _btnEditorSplit.IsEnabled = hasSelection && hasSegment;
             _btnEditorDelete.IsEnabled = hasSegment;
             _btnEditorCopy.IsEnabled = hasSegment;
             _btnEditorPaste.IsEnabled = hasClipboard;
             _btnEditorMoveUp.IsEnabled = hasSegment && _segmentsListBox.SelectedIndex > 0;
             _btnEditorMoveDown.IsEnabled = hasSegment && _segmentsListBox.SelectedIndex < _segmentsListBox.Items.Count - 1;
+            _btnEditorPlay.IsEnabled = hasSegment;
+            _btnEditorStop.IsEnabled = false;
+            _btnEditorZoomIn.IsEnabled = hasSegments;
+            _btnEditorZoomOut.IsEnabled = hasSegments && _editorZoomLevel > 1.0;
+            _btnEditorZoomReset.IsEnabled = hasSegments && _editorZoomLevel != 1.0;
         }
 
         private void EditorCutSelection()
@@ -2934,6 +3042,147 @@ namespace ErAudioTool.UI
                     });
                 });
             }
+        }
+
+        private void EditorPlaySegment()
+        {
+            if (_segmentsListBox.SelectedItem == null) return;
+
+            Grid selectedGrid = _segmentsListBox.SelectedItem as Grid;
+            if (selectedGrid == null) return;
+
+            string segmentId = selectedGrid.Tag as string;
+            var segment = _editorEngine.Segments.FirstOrDefault(s => s.Id == segmentId);
+            if (segment == null) return;
+
+            // Create temporary WAV file to play
+            string tempFile = Path.Combine(Path.GetTempPath(), "editor_preview_" + Guid.NewGuid().ToString() + ".wav");
+
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    // Write segment to temp file
+                    using (var fs = File.Create(tempFile))
+                    using (var bw = new BinaryWriter(fs))
+                    {
+                        int sampleCount = segment.AudioData[0].Length;
+                        int dataSize = sampleCount * segment.Channels * 2;
+                        int fileSize = 36 + dataSize;
+
+                        bw.Write("RIFF".ToCharArray());
+                        bw.Write(fileSize);
+                        bw.Write("WAVE".ToCharArray());
+
+                        bw.Write("fmt ".ToCharArray());
+                        bw.Write(16);
+                        bw.Write((short)1);
+                        bw.Write((short)segment.Channels);
+                        bw.Write(segment.SampleRate);
+                        bw.Write(segment.SampleRate * segment.Channels * 2);
+                        bw.Write((short)(segment.Channels * 2));
+                        bw.Write((short)16);
+
+                        bw.Write("data".ToCharArray());
+                        bw.Write(dataSize);
+
+                        for (int i = 0; i < sampleCount; i++)
+                        {
+                            for (int ch = 0; ch < segment.Channels; ch++)
+                            {
+                                float sample = Math.Max(-1.0f, Math.Min(1.0f, segment.AudioData[ch][i]));
+                                short intSample = (short)(sample * 32767.0f);
+                                bw.Write(intSample);
+                            }
+                        }
+                    }
+
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        _player.Play(tempFile);
+                        _btnEditorPlay.IsEnabled = false;
+                        _btnEditorStop.IsEnabled = true;
+                        _editorLogTextBox.AppendText(string.Format("[{0}] Wiedergabe gestartet: {1}\n", DateTime.Now.ToString("HH:mm:ss"), segment.Name));
+                        _editorLogTextBox.ScrollToEnd();
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        _editorLogTextBox.AppendText(string.Format("[{0}] Fehler bei Wiedergabe: {1}\n", DateTime.Now.ToString("HH:mm:ss"), ex.Message));
+                        _editorLogTextBox.ScrollToEnd();
+                    });
+                }
+            });
+
+            // Update button when playback stops
+            EventHandler stopHandler = null;
+            stopHandler = (s, ev) =>
+            {
+                _player.PlaybackStopped -= stopHandler;
+                Dispatcher.InvokeAsync(() =>
+                {
+                    _btnEditorPlay.IsEnabled = true;
+                    _btnEditorStop.IsEnabled = false;
+                    try { File.Delete(tempFile); } catch { }
+                });
+            };
+            _player.PlaybackStopped += stopHandler;
+        }
+
+        private void EditorStopPlayback()
+        {
+            _player.Stop();
+            _btnEditorPlay.IsEnabled = true;
+            _btnEditorStop.IsEnabled = false;
+            _editorLogTextBox.AppendText(string.Format("[{0}] Wiedergabe gestoppt\n", DateTime.Now.ToString("HH:mm:ss")));
+            _editorLogTextBox.ScrollToEnd();
+        }
+
+        private void EditorZoomIn()
+        {
+            _editorZoomLevel = Math.Min(_editorZoomLevel * 2.0, 16.0);
+            UpdateWaveformZoom();
+            _editorLogTextBox.AppendText(string.Format("[{0}] Zoom: {1:0.0}x\n", DateTime.Now.ToString("HH:mm:ss"), _editorZoomLevel));
+            _editorLogTextBox.ScrollToEnd();
+            UpdateEditorButtons();
+        }
+
+        private void EditorZoomOut()
+        {
+            _editorZoomLevel = Math.Max(_editorZoomLevel / 2.0, 1.0);
+            UpdateWaveformZoom();
+            _editorLogTextBox.AppendText(string.Format("[{0}] Zoom: {1:0.0}x\n", DateTime.Now.ToString("HH:mm:ss"), _editorZoomLevel));
+            _editorLogTextBox.ScrollToEnd();
+            UpdateEditorButtons();
+        }
+
+        private void EditorZoomReset()
+        {
+            _editorZoomLevel = 1.0;
+            _editorZoomOffset = 0.0;
+            UpdateWaveformZoom();
+            _editorLogTextBox.AppendText(string.Format("[{0}] Zoom zurückgesetzt\n", DateTime.Now.ToString("HH:mm:ss")));
+            _editorLogTextBox.ScrollToEnd();
+            UpdateEditorButtons();
+        }
+
+        private void UpdateWaveformZoom()
+        {
+            if (_segmentsListBox.SelectedItem == null) return;
+
+            Grid selectedGrid = _segmentsListBox.SelectedItem as Grid;
+            if (selectedGrid == null) return;
+
+            string segmentId = selectedGrid.Tag as string;
+            var segment = _editorEngine.Segments.FirstOrDefault(s => s.Id == segmentId);
+            if (segment == null) return;
+
+            // Get waveform data with zoom
+            int waveformWidth = (int)(800 * _editorZoomLevel);
+            var waveformData = _editorEngine.GetWaveformData(segment, waveformWidth);
+            _waveformControl.SetWaveformData(waveformData);
         }
     }
 }
