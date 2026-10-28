@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -556,15 +556,29 @@ namespace ErAudioTool.Audio
             {
                 string outDir = Path.GetDirectoryName(outputMidi);
                 if (string.IsNullOrEmpty(outDir)) outDir = Directory.GetCurrentDirectory();
+                string inBasePre = Path.GetFileNameWithoutExtension(inputAudio);
+                string expectedMidPre = Path.Combine(outDir, inBasePre + "_basic_pitch.mid");
+                if (File.Exists(expectedMidPre)) { try { File.Delete(expectedMidPre); } catch { } }
+
+                string toolArgs = string.Format("\"{0}\" \"{1}\"", outDir, inputAudio);
+                if (toolExe.ToLowerInvariant().Contains("basic-pitch") && !toolArgs.Contains("--model-serialization"))
+                {
+                    toolArgs = "--model-serialization onnx " + toolArgs;
+                }
+
                 var psi = new ProcessStartInfo
                 {
                     FileName = toolExe,
-                    Arguments = string.Format("\"{0}\" \"{1}\"", outDir, inputAudio),
+                    Arguments = toolArgs,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true
                 };
+                try {
+                    psi.EnvironmentVariables["PYTHONUTF8"] = "1";
+                    psi.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
+                } catch { }
                 using (var p = new Process())
                 {
                     p.StartInfo = psi;

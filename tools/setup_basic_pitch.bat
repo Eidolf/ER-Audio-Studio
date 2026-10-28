@@ -74,7 +74,9 @@ echo 3. Installiere Spotifys Basic-Pitch KI-Engine...
 "%PY_DIR%\Scripts\pip.exe" install basic-pitch --no-warn-script-location
 
 echo @echo off > "%BASIC_PITCH_CMD%"
-echo "%PY_DIR%\Scripts\basic-pitch.exe" %%%%* >> "%BASIC_PITCH_CMD%"
+echo set "PYTHONUTF8=1" >> "%BASIC_PITCH_CMD%"
+echo set "PYTHONIOENCODING=utf-8" >> "%BASIC_PITCH_CMD%"
+echo "%PY_DIR%\Scripts\basic-pitch.exe" --model-serialization onnx %%* >> "%BASIC_PITCH_CMD%"
 
 echo.
 echo ==========================================================
